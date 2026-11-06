@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-Content Market Pulse · 디자인시스템 v0.1</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); font-size: var(--fs-body); line-height: var(--lh-body);
+         color: var(--text-primary); background: var(--ui-page); }
+  .wrap { padding-inline: var(--page-inset); }
+
+  /* Header */
+  /* 글로벌 내비: 얇은 반투명 바 (Apple 48px) */
+  .hdr { background: color-mix(in srgb, var(--ui-surface) 80%, transparent); backdrop-filter: saturate(180%) blur(20px);
+         -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--ui-border); position: sticky; top: 0; z-index: 10; }
+  .hdr .wrap { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); }
+  .logo { font-weight: var(--fw-bold); font-size: var(--fs-h3); display: flex; gap: var(--sp-2); align-items: center; }
+  .logo i { width: 12px; height: 12px; border-radius: 3px; background: var(--brand-primary); box-shadow: 6px 6px 0 var(--brand-accent); display: inline-block; margin-right: 6px; }
+  .nav { display: flex; gap: var(--sp-6); font-size: var(--fs-sm); color: var(--text-secondary); }
+  .nav a { color: inherit; text-decoration: none; }
+  .nav a:hover { color: var(--brand-primary); }
+
+  /* 챕터 내비: 아이콘 바로가기 줄 */
+  .chapter { background: var(--ui-surface); border-bottom: 1px solid var(--ui-border); }
+  .chapter ul { list-style: none; margin: 0; padding: var(--sp-4) var(--page-inset); display: flex; gap: var(--sp-8);
+                justify-content: center; overflow-x: auto; scrollbar-width: none; }
+  .chapter a { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); min-width: 72px;
+               font-size: var(--fs-xs); color: var(--text-primary); text-decoration: none; }
+  .chapter a svg { width: 36px; height: 36px; stroke: var(--text-secondary); fill: none; stroke-width: 1.6; }
+  .chapter a:hover svg { stroke: var(--brand-primary); }
+  .chapter a .new { color: var(--brand-primary-ink); font-size: 11px; font-weight: var(--fw-bold); margin-top: -6px; }
+
+  /* 페이지 헤더: 크게, 왼쪽 정렬 */
+  .page-head { background: var(--ui-surface); padding: var(--section-pad) var(--page-inset) var(--sp-10); }
+  .page-head h1 { font-size: var(--fs-page-title); font-weight: var(--fw-bold); line-height: 1.12; letter-spacing: -0.015em; margin: 0; }
+  .page-head p { font-size: clamp(17px, 1.6vw, 21px); color: var(--text-secondary); margin: var(--sp-4) 0 0; max-width: 760px; }
+
+  /* 섹션: 전체 폭 띠, 바탕 번갈아 */
+  section.block { background: var(--ui-page); padding: var(--section-pad) var(--page-inset); margin: 0; }
+  section.block:nth-of-type(even) { background: var(--ui-surface); }
+  section.block > h2 { font-size: var(--fs-section-title); font-weight: var(--fw-bold); line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 var(--sp-3); }
+  .lead { color: var(--text-secondary); font-size: var(--fs-body); margin: 0 0 var(--section-gap); max-width: 760px; }
+  h3.sub { font-size: var(--fs-h3); font-weight: var(--fw-medium); margin: var(--sp-8) 0 var(--sp-3); }
+  h3.sub:first-of-type { margin-top: 0; }
+
+  /* Color chips */
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-4); }
+  .chip { border: 1px solid var(--ui-border); border-radius: var(--r-md); overflow: hidden; background: var(--ui-surface); }
+  .chip .sw { height: 72px; position: relative; }
+  .chip .sw b { position: absolute; left: 10px; top: 8px; font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+  .chip .meta { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-xs); line-height: 1.5; }
+  .chip .meta strong { display: block; font-size: var(--fs-sm); }
+  .chip.sib { border-style: dashed; }
+  .chip .sibtag { color: var(--text-muted); }
+  .chip .meta code { color: var(--text-muted); font-family: ui-monospace, Consolas, monospace; }
+  .ramp { display: grid; grid-template-columns: repeat(13, 1fr); border-radius: var(--r-md); overflow: hidden; }
+  .ramp div { height: 48px; }
+  .ramp-lbl { display: grid; grid-template-columns: repeat(13, 1fr); font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: center; }
+  .div7 { grid-template-columns: repeat(7, 1fr); }
+  .note { font-size: var(--fs-sm); color: var(--text-secondary); background: var(--ui-surface-2); border-radius: var(--r-sm);
+          padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-4); }
+  .note ul { margin: 0; padding-left: 18px; }
+
+  /* Type scale */
+  .type-row { display: flex; align-items: baseline; gap: var(--sp-6); padding: var(--sp-3) 0; border-bottom: 1px solid var(--ui-border); }
+  .type-row span.t { width: 140px; flex: none; font-size: var(--fs-xs); color: var(--text-muted); }
+
+  /* Components */
+  .row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+  .btn { font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-medium); border-radius: var(--r-pill);
+         padding: 8px 18px; border: 1px solid transparent; cursor: pointer; }
+  .btn-primary { background: var(--brand-primary); color: var(--on-primary); box-shadow: var(--sh-pop); }
+  .btn-primary:hover { background: var(--brand-primary-hover); }
+  .btn-secondary { background: var(--ui-surface); color: var(--text-primary); border-color: var(--ui-border); }
+  .btn-ghost { background: transparent; color: var(--brand-primary-ink); }
+  .btn-ghost:hover { background: var(--brand-primary-soft); }
+  .badge { font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 2px 8px; border-radius: var(--r-sm); }
+  .badge-new { background: var(--brand-accent); color: #121314; }
+  .badge-soft { background: var(--brand-primary-soft); color: var(--brand-primary-ink); }
+  .badge-src { background: var(--ui-surface-2); color: var(--text-secondary); font-weight: var(--fw-medium); }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--text-secondary); }
+  .status i { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 10px; color: #fff; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; padding: var(--sp-3);
+             background: var(--ui-surface-2); border-radius: var(--r-md); }
+  select, input[type=search] { font: inherit; font-size: var(--fs-sm); color: var(--text-primary); background: var(--ui-surface);
+             border: 1px solid var(--ui-border); border-radius: var(--r-md); padding: 6px 12px; }
+  /* 세그먼트 탭: 회색 플래터 + 흰 알약 (Apple TabNav) */
+  .seg { display: inline-flex; background: color-mix(in srgb, var(--text-primary) 8%, var(--ui-surface)); border-radius: var(--r-pill); padding: 4px; }
+  .seg button { font: inherit; font-size: var(--fs-sm); border: 0; background: transparent; color: var(--text-secondary);
+                padding: 6px 16px; border-radius: var(--r-pill); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--ui-surface); color: var(--text-primary); font-weight: var(--fw-medium); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* 카드 레일: 가로 스크롤 + 스냅. 왼쪽은 그리드에 맞추고 오른쪽은 화면 끝까지 */
+  .rail-wrap { margin-inline: calc(-1 * var(--page-inset)); position: relative; }
+  .rail { display: flex; gap: var(--rail-gap); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--page-inset);
+          padding: var(--sp-2) var(--page-inset) var(--sp-6); scrollbar-width: none; }
+  .rail::-webkit-scrollbar { display: none; }
+  .feature { flex: none; width: var(--rail-card-w); min-height: 340px; scroll-snap-align: start; background: var(--ui-surface);
+             border-radius: var(--r-xl); padding: var(--sp-8) var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-2);
+             transition: transform .25s ease; }
+  section.block:nth-of-type(even) .feature { background: var(--ui-page); }
+  .feature:hover { transform: scale(1.015); }
+  .feature .eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--text-secondary); }
+  .feature h4 { font-size: clamp(22px, 2vw, 28px); line-height: 1.2; margin: 0; }
+  .feature .big { font-size: clamp(36px, 3.4vw, 48px); font-weight: var(--fw-bold); margin-top: auto; line-height: 1.1; }
+  .feature .big small { font-size: var(--fs-body); color: var(--text-secondary); font-weight: var(--fw-medium); }
+  .feature .src { font-size: 11px; color: var(--text-muted); }
+  .paddles { display: flex; gap: var(--sp-3); }
+  .paddles button { width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer; font-size: 18px; line-height: 1;
+                    background: color-mix(in srgb, var(--text-primary) 8%, var(--ui-surface)); color: var(--text-secondary); }
+  .spec { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-4); margin-top: var(--section-gap); }
+  .spec div { background: var(--ui-surface); border-radius: var(--r-lg); padding: var(--sp-5); font-size: var(--fs-sm); color: var(--text-secondary); }
+  section.block:nth-of-type(even) .spec div { background: var(--ui-page); }
+  .spec b { display: block; color: var(--text-primary); font-size: var(--fs-body); margin-bottom: var(--sp-1); }
+  .spec code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--brand-primary-ink); }
+
+  .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--ui-border); }
+  .tabs button { font: inherit; font-size: var(--fs-sm); border: 0; background: none; padding: 10px 14px; color: var(--text-muted);
+                 border-bottom: 2px solid transparent; cursor: pointer; }
+  .tabs button[aria-selected=true] { color: var(--brand-primary-ink); border-color: var(--brand-primary); font-weight: var(--fw-medium); }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); }
+  .kpi { border: 1px solid var(--ui-border); border-radius: var(--r-lg); padding: var(--sp-5); background: var(--ui-surface); }
+  .kpi .lbl { font-size: var(--fs-sm); color: var(--text-secondary); }
+  .kpi .val { font-size: var(--fs-kpi); font-weight: var(--fw-bold); line-height: 1.2; margin: var(--sp-2) 0; }
+  .kpi .val small { font-size: var(--fs-body); font-weight: var(--fw-medium); color: var(--text-secondary); margin-left: 2px; }
+  .kpi .delta { font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+  .up { color: var(--delta-up-text); } .down { color: var(--delta-down-text); }
+  .kpi .src { font-size: 11px; color: var(--text-muted); margin-top: var(--sp-2); }
+
+  table.dt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+  table.dt th { text-align: left; font-weight: var(--fw-medium); color: var(--text-secondary); background: var(--ui-surface-2); padding: 10px 12px; }
+  table.dt td { padding: 10px 12px; border-bottom: 1px solid var(--ui-border); }
+  table.dt td.n, table.dt th.n { text-align: right; }
+
+  /* Chart sample */
+  .chart-card { border: 1px solid var(--ui-border); border-radius: var(--r-lg); padding: var(--sp-5); background: var(--ui-surface); position: relative; }
+  .chart-card h4 { margin: 0; font-size: var(--fs-body); }
+  .chart-card .cap { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 var(--sp-4); }
+  svg text { font-family: var(--font-sans); }
+  .tip { position: absolute; pointer-events: none; background: var(--text-primary); color: var(--ui-surface); font-size: var(--fs-xs);
+         padding: 6px 10px; border-radius: var(--r-sm); box-shadow: var(--sh-pop); opacity: 0; transition: opacity .1s; white-space: nowrap; }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-xs); color: var(--text-secondary); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .toast { display: inline-flex; gap: var(--sp-3); align-items: center; background: var(--text-primary); color: var(--ui-surface);
+           padding: 10px 16px; border-radius: var(--r-md); font-size: var(--fs-sm); box-shadow: var(--sh-pop); }
+  .callout { border-left: 3px solid var(--brand-accent); background: var(--ui-surface-2); padding: var(--sp-3) var(--sp-4);
+             border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: var(--fs-sm); color: var(--text-secondary); }
+
+  footer { color: var(--text-muted); font-size: var(--fs-xs); padding: var(--sp-8) var(--page-inset) var(--sp-12); border-top: 1px solid var(--ui-border); background: var(--ui-page); }
+  @media (max-width: 640px) { .nav a { display: none; } .chapter ul { justify-content: flex-start; } .ramp-lbl { font-size: 9px; } }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <div class="logo"><i></i>K-Content Market Pulse</div>
+    <nav class="nav"><a href="#layout">레이아웃</a><a href="#color">컬러</a><a href="#type">타이포</a><a href="#comp">컴포넌트</a><a href="#chart">차트</a>
+      <button class="btn btn-secondary" id="theme" style="padding:4px 12px">다크 모드</button></nav>
+  </div>
+</header>
+
+<nav class="chapter" aria-label="챕터 바로가기"><ul><li><a href="#layout"><svg viewBox="0 0 36 36" aria-hidden="true"><rect x="5" y="7" width="26" height="22" rx="4"/><path d="M5 14h26M14 14v15"/></svg><span>레이아웃</span></a></li><li><a href="#color"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="13" cy="14" r="7"/><circle cx="23" cy="14" r="7"/><circle cx="18" cy="23" r="7"/></svg><span>컬러</span><span class="new">11색</span></a></li><li><a href="#type"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M9 28L17 8h2l8 20M12 21h12"/></svg><span>타이포</span></a></li><li><a href="#comp"><svg viewBox="0 0 36 36" aria-hidden="true"><rect x="6" y="6" width="10" height="10" rx="2"/><rect x="20" y="6" width="10" height="10" rx="5"/><rect x="6" y="20" width="24" height="10" rx="5"/></svg><span>컴포넌트</span></a></li><li><a href="#chart"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M7 29V9M7 29h23"/><path d="M12 25v-6M18 25V13M24 25v-9"/></svg><span>차트</span></a></li></ul></nav>
+
+<div class="page-head">
+  <h1>콘텐츠 시장 대시보드<br>디자인시스템.</h1>
+  <p>위니브 '웹 구성요소 가이드'의 컴포넌트 톤과 Apple Mac 페이지의 레이아웃 리듬을 합치고, 데이터 시각화 규칙을 더했습니다.</p>
+</div>
+
+<main>
+
+<!-- ================= LAYOUT ================= -->
+<section class="block" id="layout">
+  <h2>레이아웃.</h2>
+  <p class="lead">Apple Mac 페이지의 구조를 따릅니다. 화면 전체 폭의 띠를 번갈아 깔고, 큰 제목과 넉넉한 여백으로 한 섹션에 한 가지 이야기만 합니다.</p>
+  <div class="row" style="justify-content:space-between;margin-bottom:var(--sp-4)">
+    <div class="seg" role="group" aria-label="보기"><button aria-pressed="true">전국</button><button aria-pressed="false">수도권</button><button aria-pressed="false">비수도권</button></div>
+    <div class="paddles"><button aria-label="이전" onclick="document.getElementById('rail').scrollBy({left:-400,behavior:'smooth'})">&lsaquo;</button><button aria-label="다음" onclick="document.getElementById('rail').scrollBy({left:400,behavior:'smooth'})">&rsaquo;</button></div>
+  </div>
+  <div class="rail-wrap"><div class="rail" id="rail">
+    <article class="feature"><span class="eyebrow">매출 추이</span><h4>콘텐츠산업 매출</h4><div class="big">157.1<small>조 원</small></div><span class="src">콘텐츠산업조사 · 2024</span></article>
+    <article class="feature"><span class="eyebrow">지역 집중</span><h4>서울 매출</h4><div class="big">103.9<small>조 원</small></div><span class="src">콘텐츠산업조사 · 2024</span></article>
+    <article class="feature"><span class="eyebrow">창업</span><h4>정보통신업 신생기업</h4><div class="big">27,292<small>개</small></div><span class="src">기업생멸행정통계 · 2024</span></article>
+    <article class="feature"><span class="eyebrow">소멸</span><h4>예술·여가 소멸기업</h4><div class="big">16,783<small>개</small></div><span class="src">기업생멸행정통계 · 2024</span></article>
+    <article class="feature"><span class="eyebrow">예산</span><h4>지자체 문화예산</h4><div class="big">13.5<small>조 원</small></div><span class="src">공연예술조사 · 2024</span></article>
+  </div></div>
+  <div class="spec">
+    <div><b>전체 폭 띠 섹션</b>바탕을 <code>--ui-page</code> ↔ <code>--ui-surface</code>로 번갈아 깔아 구획합니다. 테두리·그림자 상자로 섹션을 감싸지 않습니다.</div>
+    <div><b>그리드</b>콘텐츠 최대 폭 <code>1280px</code>, 왼쪽 정렬. 바깥 여백 <code>--page-inset</code>은 화면 폭에 따라 정해지고 최소 24px입니다.</div>
+    <div><b>세로 리듬</b>섹션 위아래 <code>clamp(56px, 8vw, 120px)</code>. 제목과 콘텐츠 사이 <code>24~40px</code>.</div>
+    <div><b>제목</b>페이지 제목 <code>40→80px</code>, 섹션 제목 <code>28→48px</code>. 굵게, 왼쪽 정렬, 마침표로 끝맺습니다.</div>
+    <div><b>내비게이션</b>48px 반투명 글로벌 바 + 아이콘 챕터 바로가기(매출·창업·지역·예산·정책).</div>
+    <div><b>카드 레일</b>라운드 <code>28px</code>, 그림자 없음, 간격 20px. 가로 스크롤·스냅, 왼쪽은 그리드에 맞추고 오른쪽은 화면 끝까지. ‹ › 버튼 제공.</div>
+  </div>
+</section>
+
+<!-- ================= COLOR ================= -->
+<section class="block" id="color">
+  <h2>컬러.</h2>
+  <p class="lead">컨셉: <b>"스포트라이트"</b> — 무대를 비추는 블루(신뢰·데이터)와 조명 같은 옐로(하이라이트) 위에, 장르별로 선명한 11색을 얹습니다.</p>
+
+  <h3 class="sub">브랜드 · UI</h3>
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:var(--brand-primary);color:#fff"><b>Aa</b></div><div class="meta"><strong>Primary</strong><code>#2E6FF2</code><br>버튼·링크·활성 탭</div></div>
+    <div class="chip"><div class="sw" style="background:var(--brand-primary-hover);color:#fff"><b>Aa</b></div><div class="meta"><strong>Primary Hover</strong><code>#1F5AD6</code><br>호버·눌림</div></div>
+    <div class="chip"><div class="sw" style="background:var(--brand-primary-soft);color:var(--brand-primary-ink)"><b>Aa</b></div><div class="meta"><strong>Primary Soft</strong><code>#EAF1FE</code><br>선택 배경</div></div>
+    <div class="chip"><div class="sw" style="background:var(--brand-accent);color:#121314"><b>Aa</b></div><div class="meta"><strong>Spotlight</strong><code>#F0B100</code><br>NEW 배지·강조 (글자는 검정)</div></div>
+    <div class="chip"><div class="sw" style="background:var(--text-primary);color:#fff"><b>Aa</b></div><div class="meta"><strong>Ink</strong><code>#121314</code><br>본문 17:1</div></div>
+    <div class="chip"><div class="sw" style="background:var(--text-secondary);color:#fff"><b>Aa</b></div><div class="meta"><strong>Ink 2</strong><code>#4A4B57</code><br>보조 텍스트</div></div>
+    <div class="chip"><div class="sw" style="background:var(--text-muted);color:#fff"><b>Aa</b></div><div class="meta"><strong>Muted</strong><code>#646573</code><br>축·캡션·출처</div></div>
+    <div class="chip"><div class="sw" style="background:var(--ui-page);border-bottom:1px solid var(--ui-border)"></div><div class="meta"><strong>Page</strong><code>#F3F5FA</code><br>페이지 바탕</div></div>
+    <div class="chip"><div class="sw" style="background:var(--ui-surface-2)"></div><div class="meta"><strong>Surface 2</strong><code>#F3F3F5</code><br>입력·표 헤더</div></div>
+  </div>
+
+  <h3 class="sub">장르 컬러 (Categorical · 11색, 순서 고정)</h3>
+  <div class="chips">
+    <div class="chip"><div class="sw" style="background:var(--genre-broadcast)"></div><div class="meta"><strong>1 방송·영상</strong><code>#2E6FF2 · D #4A86F7</code></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-game)"></div><div class="meta"><strong>2 게임</strong><code>#EB6834 · D #D95926</code></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-music)"></div><div class="meta"><strong>3 음악</strong><code>#1BAF7A · D #199E70</code></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-publish)"></div><div class="meta"><strong>4 출판</strong><code>#EDA100 · D #C98500</code></div></div>
+    <div class="chip sib"><div class="sw" style="background:var(--genre-comics)"></div><div class="meta"><strong>4b 만화</strong><code>#A07229 · D #8A5B04</code><br><span class="sibtag">↳ 출판 파생</span></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-character)"></div><div class="meta"><strong>5 캐릭터</strong><code>#E87BA4 · D #D55181</code></div></div>
+    <div class="chip sib"><div class="sw" style="background:var(--genre-animation)"></div><div class="meta"><strong>5b 애니메이션</strong><code>#9D516E · D #8C435B</code><br><span class="sibtag">↳ 캐릭터 파생</span></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-knowledge)"></div><div class="meta"><strong>6 지식정보</strong><code>#008300 · D #008300</code></div></div>
+    <div class="chip sib"><div class="sw" style="background:var(--genre-solution)"></div><div class="meta"><strong>6b 콘텐츠솔루션</strong><code>#72AC6D · D #6CA668</code><br><span class="sibtag">↳ 지식정보 파생</span></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-film)"></div><div class="meta"><strong>7 영화</strong><code>#6250D6 · D #9085E9</code></div></div>
+    <div class="chip"><div class="sw" style="background:var(--genre-ad)"></div><div class="meta"><strong>8 광고</strong><code>#E34948 · D #E66767</code></div></div>
+  </div>
+  <div class="note"><ul>
+    <li>검증 결과: 11색 순서 그대로 라이트·다크 모두 통과 — 색각이상(적록) 인접 쌍 최소 ΔE 9.1(라이트)/8.4(다크), 일반 시각 최소 17.5/15.6.</li>
+    <li>라이트 모드에서 음악·출판·캐릭터·콘텐츠솔루션 색, 다크 모드에서 애니메이션 색은 흰 바탕 대비 3:1 미만 → 이 색을 쓰는 차트는 <b>직접 라벨 또는 표 보기</b>를 반드시 함께 둡니다.</li>
+    <li>관련 장르 3쌍(출판→만화, 캐릭터→애니메이션, 지식정보→콘텐츠솔루션)은 묶지 않고, 같은 색상에서 <b>채도·명도를 낮춘 파생색</b>을 씁니다. 파생색은 누적 막대·범례·표에서 항상 기본색 바로 옆에 두고, 막대 사이 2px 간격과 직접 라벨로 구분을 돕습니다.</li>
+    <li>11색을 한 번에 쓰는 것은 막대·누적 막대·선 차트(순서가 고정된 차트)만 해당합니다. 산점도·지도처럼 아무 색끼리 붙을 수 있는 차트는 3계열까지만 색으로 구분합니다.</li>
+    <li><b>17개 시도에는 범주 색을 쓰지 않습니다.</b> 지역 비교는 한 가지 색 막대, 지도는 아래 순차 램프를 씁니다.</li>
+  </ul></div>
+
+  <h3 class="sub">순차 램프 (Sequential · 지역 지도·히트맵)</h3>
+  <div class="ramp">
+    <div style="background:var(--seq-100)"></div><div style="background:var(--seq-150)"></div><div style="background:var(--seq-200)"></div><div style="background:var(--seq-250)"></div><div style="background:var(--seq-300)"></div><div style="background:var(--seq-350)"></div><div style="background:var(--seq-400)"></div><div style="background:var(--seq-450)"></div><div style="background:var(--seq-500)"></div><div style="background:var(--seq-550)"></div><div style="background:var(--seq-600)"></div><div style="background:var(--seq-650)"></div><div style="background:var(--seq-700)"></div>
+  </div>
+  <div class="ramp-lbl"><span>100</span><span>150</span><span>200</span><span>250</span><span>300</span><span>350</span><span>400</span><span>450</span><span>500</span><span>550</span><span>600</span><span>650</span><span>700</span></div>
+
+  <h3 class="sub">발산 램프 (Diverging · 전년 대비 증감률)</h3>
+  <div class="ramp div7">
+    <div style="background:var(--div-neg-3)"></div><div style="background:var(--div-neg-2)"></div><div style="background:var(--div-neg-1)"></div><div style="background:var(--div-mid)"></div><div style="background:var(--div-pos-1)"></div><div style="background:var(--div-pos-2)"></div><div style="background:var(--div-pos-3)"></div>
+  </div>
+  <div class="ramp-lbl div7"><span>감소 큼</span><span></span><span></span><span>0%</span><span></span><span></span><span>증가 큼</span></div>
+
+  <h3 class="sub">상태 (Status · 아이콘+라벨 필수)</h3>
+  <div class="row">
+    <span class="status"><i style="background:var(--status-good)">✓</i>양호</span>
+    <span class="status"><i style="background:var(--status-warning);color:#121314">!</i>주의</span>
+    <span class="status"><i style="background:var(--status-serious)">!</i>경계</span>
+    <span class="status"><i style="background:var(--status-critical)">×</i>위험</span>
+    <span class="status" style="margin-left:12px"><span class="badge badge-src">⚠ 시계열 단절</span> 통계 개편 시점 표시용</span>
+  </div>
+</section>
+
+<!-- ================= TYPE ================= -->
+<section class="block" id="type">
+  <h2>타이포그래피 · 간격.</h2>
+  <p class="lead">LINE Seed Sans KR → Pretendard 순으로 씁니다. 표·축 숫자는 자릿수 정렬(tabular-nums)을 씁니다.</p>
+  <div class="type-row"><span class="t">Display 36 / Bold</span><span style="font-size:var(--fs-display);font-weight:700">콘텐츠 시장</span></div>
+  <div class="type-row"><span class="t">KPI 32 / Bold</span><span style="font-size:var(--fs-kpi);font-weight:700">157.1<small style="font-size:16px">조 원</small></span></div>
+  <div class="type-row"><span class="t">H1 28 / Bold</span><span style="font-size:var(--fs-h1);font-weight:700">지역별 매출 동향</span></div>
+  <div class="type-row"><span class="t">H2 22 / Bold</span><span style="font-size:var(--fs-h2);font-weight:700">창업·소멸 추이</span></div>
+  <div class="type-row"><span class="t">H3 18 / Medium</span><span style="font-size:var(--fs-h3);font-weight:500">차트 제목</span></div>
+  <div class="type-row"><span class="t">Body 16 / Regular</span><span>본문과 해설 문장에 씁니다.</span></div>
+  <div class="type-row"><span class="t">Small 14</span><span style="font-size:14px">표, 필터, 버튼</span></div>
+  <div class="type-row"><span class="t">Caption 12 / Muted</span><span style="font-size:12px;color:var(--text-muted)">출처: 국가통계포털 KOSIS, 「콘텐츠산업조사」</span></div>
+  <h3 class="sub">간격 · 모서리</h3>
+  <div class="row" style="align-items:flex-end">
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:4px;height:4px;background:var(--brand-primary);margin:auto"></div>4</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:8px;height:8px;background:var(--brand-primary);margin:auto"></div>8</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:16px;height:16px;background:var(--brand-primary);margin:auto"></div>16</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:24px;height:24px;background:var(--brand-primary);margin:auto"></div>24</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:32px;height:32px;background:var(--brand-primary);margin:auto"></div>32</div>
+    <div style="width:1px;height:40px;background:var(--ui-border);margin:0 12px"></div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:56px;height:40px;border:1px solid var(--chart-axis);border-radius:8px"></div>8 배지</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:56px;height:40px;border:1px solid var(--chart-axis);border-radius:14px"></div>14 입력</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:56px;height:40px;border:1px solid var(--chart-axis);border-radius:16px"></div>16 카드</div>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted)"><div style="width:56px;height:40px;border:1px solid var(--chart-axis);border-radius:999px"></div>pill 버튼</div>
+  </div>
+</section>
+
+<!-- ================= COMPONENTS ================= -->
+<section class="block" id="comp">
+  <h2>컴포넌트.</h2>
+  <p class="lead">참조 가이드의 구성요소 중 대시보드에 쓰는 것만 추렸습니다.</p>
+
+  <h3 class="sub">버튼 · 배지</h3>
+  <div class="row">
+    <button class="btn btn-primary">데이터 내려받기</button>
+    <button class="btn btn-secondary">표로 보기</button>
+    <button class="btn btn-ghost">출처 보기</button>
+    <span class="badge badge-new">NEW</span>
+    <span class="badge badge-soft">2024 기준</span>
+    <span class="badge badge-src">KOSIS</span>
+  </div>
+
+  <h3 class="sub">필터 바 (차트 위 한 줄)</h3>
+  <div class="filters">
+    <select aria-label="지역"><option>전체 지역</option><option>서울</option><option>경기</option><option>제주</option></select>
+    <select aria-label="장르"><option>전체 장르</option><option>게임</option><option>방송·영상</option></select>
+    <div class="seg" role="group" aria-label="기간">
+      <button aria-pressed="false">5년</button><button aria-pressed="true">10년</button><button aria-pressed="false">전체</button>
+    </div>
+    <input type="search" placeholder="지표 검색" aria-label="지표 검색">
+  </div>
+
+  <h3 class="sub">탭</h3>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true">매출</button><button role="tab" aria-selected="false">창업·소멸</button>
+    <button role="tab" aria-selected="false">지역</button><button role="tab" aria-selected="false">예산</button><button role="tab" aria-selected="false">정책</button>
+  </div>
+
+  <h3 class="sub">KPI 통계 타일</h3>
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">콘텐츠산업 매출</div><div class="val">157.1<small>조 원</small></div><div class="delta up">▲ 전년 대비 증가</div><div class="src">콘텐츠산업조사 · 2024</div></div>
+    <div class="kpi"><div class="lbl">사업체 수</div><div class="val">120,863<small>개</small></div><div class="delta up">▲ 전년 대비 증가</div><div class="src">콘텐츠산업조사 · 2024</div></div>
+    <div class="kpi"><div class="lbl">종사자 수</div><div class="val">668,939<small>명</small></div><div class="delta up">▲ 전년 대비 증가</div><div class="src">콘텐츠산업조사 · 2024</div></div>
+    <div class="kpi"><div class="lbl">예술·여가 신생기업</div><div class="val">21,745<small>개</small></div><div class="delta down">▼ 전년 대비 감소</div><div class="src">기업생멸행정통계 · 2024</div></div>
+  </div>
+
+  <h3 class="sub">데이터 표</h3>
+  <table class="dt">
+    <thead><tr><th>지역</th><th class="n">2023 매출(백만원)</th><th class="n">2024 매출(백만원)</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>서울</td><td class="n">101,342,106</td><td class="n">103,904,374</td><td></td></tr>
+      <tr><td>경기</td><td class="n">28,977,457</td><td class="n">29,109,503</td><td><span class="badge badge-src">⚠ 2023 모집단 변경</span></td></tr>
+      <tr><td>제주</td><td class="n">4,101,955</td><td class="n">5,107,964</td><td><span class="badge badge-soft">본사 소재 효과</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub">해설 콜아웃 · 토스트</h3>
+  <div class="callout">제주의 매출 급증은 본사가 제주에 있는 대형 플랫폼 기업 실적이 반영된 결과일 수 있습니다.</div>
+  <div style="margin-top:12px"><span class="toast">CSV를 내려받았습니다 <button class="btn btn-ghost" style="color:var(--brand-accent);padding:2px 8px">닫기</button></span></div>
+</section>
+
+<!-- ================= CHART ================= -->
+<section class="block" id="chart">
+  <h2>차트 규칙.</h2>
+  <p class="lead">얇은 막대, 끝 4px 라운드, 막대 사이 2px 간격, 축·격자는 흐리게, 마우스를 올리면 툴팁. 한 차트에 y축은 하나만 씁니다.</p>
+  <div class="chart-card" id="cc">
+    <h4>시도별 콘텐츠산업 매출 (2024, 상위 8개)</h4>
+    <div class="cap">단위: 조 원 · 한 계열이라 한 가지 색 · 출처: KOSIS 「콘텐츠산업조사」 지역별 매출액 현황</div>
+    <svg id="bar" viewBox="0 0 720 300" width="100%" role="img" aria-label="시도별 콘텐츠산업 매출 막대 차트"></svg>
+    <div class="tip" id="tip"></div>
+  </div>
+  <h3 class="sub">범례 예시 (장르 2개 이상일 때 항상 표시)</h3>
+  <div class="legend">
+    <span><i style="background:var(--genre-broadcast)"></i>방송·영상</span><span><i style="background:var(--genre-game)"></i>게임</span><span><i style="background:var(--genre-music)"></i>음악</span><span><i style="background:var(--genre-publish)"></i>출판</span><span><i style="background:var(--genre-comics)"></i>만화</span><span><i style="background:var(--genre-character)"></i>캐릭터</span><span><i style="background:var(--genre-animation)"></i>애니메이션</span><span><i style="background:var(--genre-knowledge)"></i>지식정보</span><span><i style="background:var(--genre-solution)"></i>콘텐츠솔루션</span><span><i style="background:var(--genre-film)"></i>영화</span><span><i style="background:var(--genre-ad)"></i>광고</span>
+  </div>
+  <div class="note"><ul>
+    <li>통계 개편 시점(2012·2014·2020·2023)은 선 차트에 점선 세로선과 "⚠ 시계열 단절" 배지로 표시합니다.</li>
+    <li>서로 다른 통계표(예: 기업생멸 vs 창업기업동향)는 같은 차트의 같은 계열로 섞지 않습니다.</li>
+    <li>모든 차트 카드 하단에 출처와 KOSIS 바로가기 링크를 둡니다.</li>
+  </ul></div>
+</section>
+
+<footer>K-Content Market Pulse · Design System v0.1 · 2026-11-04 · 토큰 파일: tokens.css</footer>
+</main>
+
+<script>
+  // 테마 토글
+  const root = document.documentElement, tbtn = document.getElementById('theme');
+  tbtn.onclick = () => { const d = root.dataset.theme === 'dark'; root.dataset.theme = d ? 'light' : 'dark'; tbtn.textContent = d ? '다크 모드' : '라이트 모드'; draw(); };
+
+  // 샘플 막대 차트 (KOSIS DT_113_STBL_1024763, 2024, 백만원 → 조 원)
+  const data = [["서울",103904374],["경기",29109503],["제주",5107964],["부산",3597875],["대구",2171141],["대전",1529598],["광주",1486903],["경남",1470813]];
+  function draw() {
+    const css = getComputedStyle(root), v = n => css.getPropertyValue(n).trim();
+    const svg = document.getElementById('bar'), W = 720, H = 300, m = {l: 48, r: 12, t: 12, b: 32};
+    const max = 120, iw = W - m.l - m.r, ih = H - m.t - m.b, bw = iw / data.length;
+    const y = x => m.t + ih - (x / max) * ih;
+    let s = '';
+    for (let t = 0; t <= max; t += 30) {
+      s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${t ? v('--chart-grid') : v('--chart-axis')}" stroke-width="1"/>`;
+      s += `<text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="${v('--text-muted')}" style="font-variant-numeric:tabular-nums">${t}</text>`;
+    }
+    data.forEach(([k, val], i) => {
+      const tr = val / 1e6, x = m.l + i * bw + bw * 0.22, w = bw * 0.56, top = y(tr), h = m.t + ih - top, r = Math.min(4, h);
+      s += `<path d="M${x},${m.t + ih} V${top + r} Q${x},${top} ${x + r},${top} H${x + w - r} Q${x + w},${top} ${x + w},${top + r} V${m.t + ih} Z" fill="${v('--series-1')}"/>`;
+      s += `<rect class="hit" data-k="${k}" data-v="${tr.toFixed(1)}" x="${m.l + i * bw}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent"/>`;
+      s += `<text x="${x + w / 2}" y="${H - 10}" text-anchor="middle" font-size="12" fill="${v('--text-secondary')}">${k}</text>`;
+      if (i < 2) s += `<text x="${x + w / 2}" y="${top - 6}" text-anchor="middle" font-size="12" font-weight="500" fill="${v('--text-primary')}">${tr.toFixed(1)}</text>`;
+    });
+    svg.innerHTML = s;
+    const tip = document.getElementById('tip'), cc = document.getElementById('cc');
+    svg.querySelectorAll('.hit').forEach(el => {
+      el.onmousemove = e => { const b = cc.getBoundingClientRect(); tip.textContent = `${el.dataset.k} · ${el.dataset.v}조 원`; tip.style.left = (e.clientX - b.left + 12) + 'px'; tip.style.top = (e.clientY - b.top - 28) + 'px'; tip.style.opacity = 1; };
+      el.onmouseleave = () => tip.style.opacity = 0;
+    });
+  }
+  draw();
+</script>
+</body>
+</html>

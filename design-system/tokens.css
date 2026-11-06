@@ -1,0 +1,157 @@
+/* =========================================================
+   K-Content Market Pulse — Design Tokens v0.1
+   참조: 위니브 '웹 구성요소 가이드' (LINE Seed Sans KR, #2E6FF2, pill 버튼, 14px 라운드)
+   차트 팔레트: dataviz 검증 스크립트 통과 (light #FFFFFF / dark #16181D)
+   ========================================================= */
+
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Typography ---------- */
+  --font-sans: "LINE Seed Sans KR", Pretendard, SUIT, -apple-system, BlinkMacSystemFont,
+    system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --fs-display: 36px;  /* 히어로 제목 */
+  --fs-h1: 28px;
+  --fs-h2: 22px;
+  --fs-h3: 18px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 12px;
+  --fs-kpi: 32px;      /* 통계 타일 숫자 */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --lh-tight: 1.25;
+  --lh-body: 1.6;
+
+  /* ---------- Spacing (4px grid) ---------- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+
+  /* ---------- Radius ---------- */
+  --r-sm: 8px;     /* 배지·툴팁 */
+  --r-md: 14px;    /* 입력필드 (참조 페이지 값) */
+  --r-lg: 16px;    /* 카드·패널 */
+  --r-pill: 999px; /* 버튼·필터칩 */
+
+  --r-xl: 28px;    /* 대형 피처 카드 (Apple Mac 페이지 카드 값) */
+
+  /* ---------- Layout (Apple Mac 페이지 레이아웃 특성) ----------
+     · 전체 폭 띠(full-bleed) 섹션, 바탕을 page ↔ surface로 번갈아 깔기
+     · 콘텐츠는 1280px 그리드에 왼쪽 정렬, 바깥 여백은 화면 폭에 따라 자동
+     · 섹션 위아래 여백을 크게 (데스크톱 120px, 모바일 56px)
+     · 상단 챕터 내비(아이콘 바로가기) + 섹션 안 세그먼트 탭 + 가로 스크롤 카드 레일 */
+  --layout-max: 1280px;
+  --page-inset: max(24px, calc((100% - var(--layout-max)) / 2));
+  --section-pad: clamp(56px, 8vw, 120px);
+  --section-gap: clamp(24px, 3vw, 40px);  /* 섹션 제목 ↔ 콘텐츠 */
+  --rail-gap: 20px;                        /* 카드 레일 간격 */
+  --rail-card-w: clamp(280px, 26vw, 372px);
+  --fs-page-title: clamp(40px, 5.6vw, 80px);  /* 페이지 제목 */
+  --fs-section-title: clamp(28px, 3.4vw, 48px); /* 섹션 제목 (마침표로 끝냄) */
+  --nav-h: 48px;
+  --chapter-h: 96px;
+
+  /* ---------- Shadow ---------- */
+  --sh-card: 0 1px 2px rgba(18, 19, 20, .04), 0 1px 3px rgba(18, 19, 20, .06);
+  --sh-pop: 0 10px 15px -3px rgba(0, 0, 0, .10), 0 4px 6px -4px rgba(0, 0, 0, .10);
+
+  /* ---------- Brand ---------- */
+  --brand-primary: #2e6ff2;        /* 참조 페이지 주색. 흰 글자 4.49:1 → 버튼 글자 500+ 굵기 */
+  --brand-primary-hover: #1f5ad6;  /* 흰 글자 6.0:1 */
+  --brand-primary-soft: #eaf1fe;   /* 선택 상태 배경, 탭 활성 */
+  --brand-primary-ink: #1f5ad6;    /* soft 위 글자 5.3:1 */
+  --brand-accent: #f0b100;         /* 하이라이트·NEW 배지 (글자는 ink) */
+  --on-primary: #ffffff;           /* primary 위 글자 */
+
+  /* ---------- Neutral / UI ---------- */
+  --ui-page: #f3f5fa;        /* 페이지 바탕 */
+  --ui-surface: #ffffff;     /* 카드·차트 바탕 */
+  --ui-surface-2: #f3f3f5;   /* 입력필드·테이블 헤더 */
+  --ui-border: rgba(0, 0, 0, .10);
+  --text-primary: #121314;   /* 17:1 */
+  --text-secondary: #4a4b57; /* 8.6:1 */
+  --text-muted: #646573;     /* 축·보조 라벨 */
+
+  /* ---------- Chart chrome ---------- */
+  --chart-grid: #e6e7ec;
+  --chart-axis: #c4c6d0;
+
+  /* ---------- Categorical: 장르 11색 (순서 고정, 순환 금지) ----------
+     8개 기본 색상 + 관련 장르 3쌍은 같은 색상에서 채도·명도를 낮춘 '파생색'.
+     파생색은 항상 기본색 바로 옆에 둔다 (누적 막대·범례·표 순서 모두 아래 순서).
+     검증(인접 순서 기준): 라이트 CVD 최소 ΔE 9.1 / 일반 17.5, 다크 8.4 / 15.6 */
+  --genre-broadcast: #2e6ff2; /* 1  방송·영상 */
+  --genre-game:      #eb6834; /* 2  게임 */
+  --genre-music:     #1baf7a; /* 3  음악 */
+  --genre-publish:   #eda100; /* 4  출판 */
+  --genre-comics:    #a07229; /* 4b 만화          (출판 파생: 채도↓ 명도↓) */
+  --genre-character: #e87ba4; /* 5  캐릭터 */
+  --genre-animation: #9d516e; /* 5b 애니메이션    (캐릭터 파생: 채도↓ 명도↓) */
+  --genre-knowledge: #008300; /* 6  지식정보 */
+  --genre-solution:  #72ac6d; /* 6b 콘텐츠솔루션  (지식정보 파생: 채도↓ 명도↑) */
+  --genre-film:      #6250d6; /* 7  영화 */
+  --genre-ad:        #e34948; /* 8  광고 */
+
+  /* 장르가 아닌 일반 비교용 8슬롯 (기본색과 동일) */
+  --series-1: var(--genre-broadcast); --series-2: var(--genre-game);
+  --series-3: var(--genre-music);     --series-4: var(--genre-publish);
+  --series-5: var(--genre-character); --series-6: var(--genre-knowledge);
+  --series-7: var(--genre-film);      --series-8: var(--genre-ad);
+
+  /* ---------- Sequential (지역 지도·히트맵) : blue 100→700 ---------- */
+  --seq-100: #cde2fb; --seq-150: #b7d3f6; --seq-200: #9ec5f4; --seq-250: #86b6ef;
+  --seq-300: #6da7ec; --seq-350: #5598e7; --seq-400: #3987e5; --seq-450: #2a78d6;
+  --seq-500: #256abf; --seq-550: #1c5cab; --seq-600: #184f95; --seq-650: #104281;
+  --seq-700: #0d366b;
+
+  /* ---------- Diverging (증감률) : 감소 red ↔ 0 gray ↔ 증가 blue ---------- */
+  --div-neg-3: #b8302f; --div-neg-2: #e34948; --div-neg-1: #f2a3a2;
+  --div-mid: #eeeef1;
+  --div-pos-1: #9ec5f4; --div-pos-2: #2a78d6; --div-pos-3: #184f95;
+
+  /* ---------- Status (고정 · 아이콘+라벨 필수) ---------- */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --delta-up-text: #006300;   /* 증가 텍스트 */
+  --delta-down-text: #b8302f; /* 감소 텍스트 */
+}
+
+/* ---------- Dark mode: 같은 색상, 어두운 바탕용 단계 ---------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --brand-primary: #4a86f7;
+  --brand-primary-hover: #6b9cff;
+  --brand-primary-soft: #1d2a45;
+  --brand-primary-ink: #9dbcff;
+  --on-primary: #0b0d12;           /* 다크: 흰 글자 3.5:1 → 짙은 글자 사용 */
+  --ui-page: #0e0f13;
+  --ui-surface: #16181d;
+  --ui-surface-2: #1f2229;
+  --ui-border: rgba(255, 255, 255, .10);
+  --text-primary: #eef0f4;
+  --text-secondary: #c3c5cf;
+  --text-muted: #9a9caa;
+  --chart-grid: #262931;
+  --chart-axis: #3a3d47;
+
+  --genre-broadcast: #4a86f7;
+  --genre-game:      #d95926;
+  --genre-music:     #199e70;
+  --genre-publish:   #c98500;
+  --genre-comics:    #8a5b04;
+  --genre-character: #d55181;
+  --genre-animation: #8c435b; /* 다크 바탕 대비 2.6:1 → 직접 라벨/표 보기 필수 */
+  --genre-knowledge: #008300;
+  --genre-solution:  #6ca668;
+  --genre-film:      #9085e9;
+  --genre-ad:        #e66767;
+
+  --div-mid: #383a42;
+  --delta-up-text: #0ca30c;
+  --delta-down-text: #e66767;
+}
