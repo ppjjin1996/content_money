@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light" class="locked">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-Content Market Pulse · 콘텐츠 시장 대시보드 (초안)</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--text-primary); background: var(--ui-page); }
+  .num { font-variant-numeric: tabular-nums; }
+  a { color: var(--brand-primary-ink); }
+
+  /* 글로벌 내비 */
+  .hdr { position: sticky; top: 0; z-index: 20; height: var(--nav-h); display: flex; align-items: center; justify-content: space-between;
+         padding-inline: var(--page-inset); background: color-mix(in srgb, var(--ui-surface) 80%, transparent);
+         backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--ui-border); }
+  .logo { font-weight: var(--fw-bold); display: flex; align-items: center; gap: 10px; }
+  .logo i { width: 12px; height: 12px; border-radius: 3px; background: var(--brand-primary); box-shadow: 6px 6px 0 var(--brand-accent); display: inline-block; margin-right: 6px; }
+  .hdr-r { display: flex; align-items: center; gap: var(--sp-3); }
+  .btn { font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-medium); border-radius: var(--r-pill); padding: 6px 14px; border: 1px solid var(--ui-border); background: var(--ui-surface); color: var(--text-primary); cursor: pointer; }
+  .hdr .btn { white-space: nowrap; }
+  #mapMetric { max-width: 100%; overflow-x: auto; scrollbar-width: none; } #mapMetric button { white-space: nowrap; flex: none; }
+  .btn-primary { background: var(--brand-primary); color: var(--on-primary); border-color: transparent; }
+  select { font: inherit; font-size: var(--fs-sm); color: var(--text-primary); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--r-md); padding: 6px 12px; }
+
+  /* 챕터 내비 */
+  .chapter { background: var(--ui-surface); border-bottom: 1px solid var(--ui-border); }
+  .chapter ul { list-style: none; margin: 0; padding: var(--sp-4) var(--page-inset); display: flex; gap: var(--sp-8); justify-content: center; overflow-x: auto; scrollbar-width: none; }
+  .chapter a { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 64px; font-size: var(--fs-xs); color: var(--text-primary); text-decoration: none; }
+  .chapter svg { width: 32px; height: 32px; stroke: var(--text-secondary); fill: none; stroke-width: 1.6; }
+  .chapter a:hover svg, .chapter a.on svg { stroke: var(--brand-primary); }
+  .chapter .tag { font-size: 10px; color: var(--text-muted); margin-top: -4px; }
+
+  /* 페이지 헤더 */
+  .page-head { background: var(--ui-surface); padding: clamp(20px, 3vw, 36px) var(--page-inset) var(--sp-5); }
+  .page-head h1 { font-size: clamp(26px, 3.4vw, 44px); line-height: 1.15; letter-spacing: -0.015em; margin: 0; }
+  .page-head p { font-size: var(--fs-sm); color: var(--text-secondary); margin: var(--sp-2) 0 0; max-width: 820px; }
+  .filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-top: var(--sp-6); }
+  .filterbar label { font-size: var(--fs-sm); color: var(--text-secondary); }
+
+  /* 섹션 */
+  section.band { background: var(--ui-page); padding: var(--section-pad) var(--page-inset); }
+  section.band:nth-of-type(even) { background: var(--ui-surface); }
+  .band > h2 { font-size: var(--fs-section-title); line-height: 1.2; letter-spacing: -0.01em; margin: 0; }
+  /* 상세 섹션 접기: 제목과 요약 문장만 보이고, 누르면 펼침 */
+  .band > h2 .fold { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-3); text-align: left; letter-spacing: inherit; }
+  .band > h2 .fold .chev { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--brand-primary-ink); background: var(--brand-primary-soft);
+                            border-radius: var(--r-pill); padding: 4px 12px; letter-spacing: 0; white-space: nowrap; }
+  .band > h2 .fold:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 4px; border-radius: var(--r-sm); }
+  section.band.collapsed { padding-top: var(--sp-8); padding-bottom: var(--sp-8); }
+  section.band.collapsed > :not(h2):not(.lead) { display: none; }
+  section.band.collapsed > .lead { margin-bottom: 0; }
+  section.band.collapsed > p.lead ~ p.lead { display: none; } /* 소단락 설명은 숨기고 섹션 요약 한 줄만 */
+  .foldall { margin-left: auto; }
+  .band > .lead { color: var(--text-secondary); margin: var(--sp-3) 0 var(--section-gap); max-width: 820px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: var(--sp-5); align-items: start; }
+  .grid2 + .grid2, .card + .grid2, .grid2 + .card { margin-top: var(--sp-5); }
+
+  /* 세그먼트 */
+  .seg { display: inline-flex; background: color-mix(in srgb, var(--text-primary) 8%, var(--ui-surface)); border-radius: var(--r-pill); padding: 4px; }
+  .seg button { font: inherit; font-size: var(--fs-sm); border: 0; background: transparent; color: var(--text-secondary); padding: 6px 16px; border-radius: var(--r-pill); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--ui-surface); color: var(--text-primary); font-weight: var(--fw-medium); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  /* 카드 레일 (KPI) */
+  .rail-wrap { margin-inline: calc(-1 * var(--page-inset)); }
+  .rail { display: flex; gap: var(--rail-gap); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--page-inset); padding: var(--sp-2) var(--page-inset) var(--sp-6); scrollbar-width: none; }
+  .rail::-webkit-scrollbar { display: none; }
+  .feature { flex: none; width: clamp(240px, 22vw, 300px); min-height: 220px; scroll-snap-align: start; background: var(--ui-surface); border-radius: var(--r-xl); padding: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-1); }
+  section.band:nth-of-type(even) .feature { background: var(--ui-page); }
+  .feature .eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--text-secondary); }
+  .feature h4 { font-size: var(--fs-h3); margin: 0; font-weight: var(--fw-medium); }
+  .feature .big { font-size: clamp(32px, 3vw, 44px); font-weight: var(--fw-bold); line-height: 1.1; margin-top: auto; }
+  .feature .big small { font-size: var(--fs-body); color: var(--text-secondary); font-weight: var(--fw-medium); margin-left: 2px; }
+  .feature .delta { font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+  .up { color: var(--delta-up-text); } .down { color: var(--delta-down-text); } .flat { color: var(--text-muted); }
+  .feature .src { font-size: 11px; color: var(--text-muted); }
+  .paddles { display: flex; gap: var(--sp-2); }
+  .paddles button { width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer; font-size: 18px; background: color-mix(in srgb, var(--text-primary) 8%, var(--ui-surface)); color: var(--text-secondary); }
+
+  /* 차트 카드 */
+  .card { background: var(--ui-surface); border-radius: var(--r-xl); padding: var(--sp-6); position: relative; min-width: 0; }
+  section.band:nth-of-type(even) .card { background: var(--ui-page); }
+  .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .card h3 { font-size: var(--fs-h3); margin: 0; }
+  .card .cap { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+  .card .view { font: inherit; font-size: var(--fs-xs); border: 1px solid var(--ui-border); background: transparent; color: var(--text-secondary); border-radius: var(--r-pill); padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+  .card .tableview { display: none; max-height: 420px; overflow: auto; }
+  .card.show-table .plot { display: none; } .card.show-table .tableview { display: block; }
+  .card .foot { font-size: 11px; color: var(--text-muted); margin-top: var(--sp-3); display: flex; flex-wrap: wrap; gap: 4px var(--sp-3); }
+  .warnbadge { font-size: 11px; font-weight: var(--fw-medium); background: color-mix(in srgb, var(--status-warning) 22%, var(--ui-surface)); color: var(--text-primary); border-radius: var(--r-sm); padding: 1px 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px var(--sp-4); font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: var(--sp-3); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; } .legend i { width: 10px; height: 10px; border-radius: 3px; }
+  .legend .sib i { outline: 1px dashed var(--chart-axis); outline-offset: 1px; }
+  svg text { font-family: var(--font-sans); }
+  .tip { position: absolute; pointer-events: none; z-index: 5; background: var(--text-primary); color: var(--ui-surface); font-size: var(--fs-xs); line-height: 1.5;
+         padding: 8px 10px; border-radius: var(--r-sm); box-shadow: var(--sh-pop); opacity: 0; transition: opacity .1s; white-space: nowrap; }
+  .tip strong { display: block; margin-bottom: 2px; } .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+  .tip .tip-warn { color: var(--status-warning); margin-top: 2px; }
+  table.dt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+  table.dt th { text-align: left; font-weight: var(--fw-medium); color: var(--text-secondary); background: var(--ui-surface-2); padding: 8px 10px; position: sticky; top: 0; }
+  table.dt td { padding: 8px 10px; border-bottom: 1px solid var(--ui-border); }
+  table.dt .n { text-align: right; }
+  .callout { border-left: 3px solid var(--brand-accent); background: var(--ui-surface-2); padding: var(--sp-3) var(--sp-4); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: var(--fs-sm); color: var(--text-secondary); margin-top: var(--sp-5); }
+
+  /* 정책 타임라인 */
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
+  .timeline li { display: grid; grid-template-columns: 72px 1fr auto; gap: var(--sp-4); align-items: baseline; padding: var(--sp-3) 0; border-bottom: 1px solid var(--ui-border); }
+  .timeline .yr { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+  .timeline .amt { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+  .timeline .t { font-size: var(--fs-sm); color: var(--text-secondary); }
+  .upload { border: 1.5px dashed var(--chart-axis); border-radius: var(--r-xl); padding: var(--sp-6); color: var(--text-secondary); font-size: var(--fs-sm); }
+  .upload b { display: block; color: var(--text-primary); font-size: var(--fs-body); margin-bottom: var(--sp-2); }
+  .upload ul { margin: var(--sp-2) 0 0; padding-left: 18px; }
+
+  footer { background: var(--ui-page); border-top: 1px solid var(--ui-border); color: var(--text-muted); font-size: var(--fs-xs); padding: var(--sp-8) var(--page-inset) var(--sp-12); line-height: 1.8; }
+  footer a { color: var(--text-secondary); }
+  /* 접속 잠금 */
+  html.locked body > :not(#lock) { visibility: hidden; }
+  #lock, #pwDialog { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--sp-6);
+         background: var(--ui-page); visibility: visible; }
+  #pwDialog { background: color-mix(in srgb, var(--text-primary) 40%, transparent); }
+  .lock-card { width: min(100%, 380px); background: var(--ui-surface); border-radius: var(--r-xl); padding: var(--sp-10) var(--sp-8);
+               display: grid; gap: var(--sp-3); box-shadow: var(--sh-pop); }
+  .lock-card h1 { font-size: clamp(26px, 4vw, 32px); margin: var(--sp-4) 0 0; letter-spacing: -0.01em; }
+  .lock-card h2 { font-size: var(--fs-h2); margin: 0; }
+  .lock-sub { margin: 0 0 var(--sp-2); color: var(--text-secondary); font-size: var(--fs-sm); }
+  .lock-card input { font: inherit; font-size: var(--fs-body); padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--ui-border);
+                     background: var(--ui-surface-2); color: var(--text-primary); }
+  .lock-card input:focus { outline: 2px solid var(--brand-primary); outline-offset: 1px; }
+  .lock-card .btn { padding: 10px 16px; font-size: var(--fs-body); }
+  .lock-card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+  .lock-msg { margin: 0; min-height: 1.4em; font-size: var(--fs-sm); color: var(--delta-down-text); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  /* 상단 고정 필터 바 */
+  .fbar { position: sticky; top: var(--nav-h); z-index: 15; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+          padding: 10px var(--page-inset); background: color-mix(in srgb, var(--ui-surface) 88%, transparent);
+          backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--ui-border); }
+  .fgroup { display: flex; align-items: center; gap: var(--sp-2); position: relative; }
+  .flabel { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--text-secondary); }
+  .fbtn { font: inherit; font-size: var(--fs-sm); border: 1px solid var(--ui-border); background: var(--ui-surface); color: var(--text-primary);
+          border-radius: var(--r-pill); padding: 6px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .fbtn[aria-pressed=true] { background: var(--brand-primary-soft); color: var(--brand-primary-ink); border-color: transparent; font-weight: var(--fw-medium); }
+  .fbtn.ghost { border-color: transparent; color: var(--brand-primary-ink); background: transparent; }
+  .fbtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .fnote { font-size: 12px; color: var(--text-muted); }
+  /* 연도 달력 */
+  .cal { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; width: min(92vw, 340px); background: var(--ui-surface); border-radius: var(--r-lg);
+         box-shadow: var(--sh-pop); border: 1px solid var(--ui-border); padding: var(--sp-4); }
+  .cal[hidden] { display: none; }
+  .cal-mode { display: flex; margin-bottom: var(--sp-3); } .cal-mode button { flex: 1; }
+  .cal.mode-year .cal-pre { display: none; }
+  .cal-pre { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--sp-3); }
+  .cal-pre button { font: inherit; font-size: var(--fs-xs); border: 0; border-radius: var(--r-pill); padding: 5px 10px; cursor: pointer;
+                    background: color-mix(in srgb, var(--text-primary) 8%, var(--ui-surface)); color: var(--text-secondary); }
+  .cal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .cal-grid button { font: inherit; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; border: 0; border-radius: var(--r-sm); padding: 8px 0;
+                     background: transparent; color: var(--text-primary); cursor: pointer; }
+  .cal-grid button:hover { background: var(--brand-primary-soft); }
+  .cal-grid button.in { background: var(--brand-primary-soft); color: var(--brand-primary-ink); border-radius: 0; }
+  .cal-grid button.edge { background: var(--brand-primary); color: var(--on-primary); font-weight: var(--fw-bold); border-radius: var(--r-sm); }
+  .cal-hint { font-size: 12px; color: var(--text-muted); margin: var(--sp-3) 0 0; }
+  /* 페이지 분리 */
+  [hidden] { display: none !important; }
+  .pagegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-4); }
+  .pagecard { width: auto; min-height: 180px; text-decoration: none; color: var(--text-primary); transition: transform .2s ease, box-shadow .2s ease; }
+  .pagecard:hover, .pagecard:focus-visible { transform: translateY(-2px); box-shadow: var(--sh-pop); outline: none; }
+  .pagecard h4 { font-size: var(--fs-h2); font-weight: var(--fw-bold); }
+  .pc-stat { margin-top: auto; font-size: var(--fs-sm); color: var(--text-secondary); }
+  .pc-go { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--brand-primary-ink); }
+  .backlink { display: inline-block; margin-bottom: var(--sp-4); font-size: var(--fs-sm); color: var(--brand-primary-ink); text-decoration: none; }
+  .backlink:hover { text-decoration: underline; }
+  .chapter a[aria-current] { font-weight: var(--fw-bold); }
+  .chapter a[aria-current] svg { stroke: var(--brand-primary); }
+  /* 역할 표시 · 비밀번호 변경 */
+  .role-badge { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--brand-primary-ink); background: var(--brand-primary-soft); border-radius: var(--r-pill); padding: 3px 10px; white-space: nowrap; vertical-align: middle; }
+  .pw-target { width: 100%; } .pw-target button { flex: 1; }
+  .pw-done { font-size: var(--fs-sm); color: var(--text-secondary); background: var(--ui-surface-2); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); display: grid; gap: var(--sp-2); }
+  .pw-done[hidden] { display: none; } .pw-done p { margin: 0; }
+  /* 데이터 소스 */
+  .src-kinds { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: var(--sp-5); }
+  .kind { font-size: 11px; font-weight: var(--fw-bold); border-radius: var(--r-sm); padding: 1px 7px; white-space: nowrap; }
+  .kind-stat { background: color-mix(in srgb, var(--status-good) 16%, var(--ui-surface)); }
+  .kind-admin { background: var(--brand-primary-soft); color: var(--brand-primary-ink); }
+  .kind-doc { background: color-mix(in srgb, var(--status-warning) 22%, var(--ui-surface)); }
+  .kind-made { background: color-mix(in srgb, var(--text-primary) 10%, var(--ui-surface)); }
+  .refs { list-style: none; counter-reset: ref; margin: 0; padding: 0; display: grid; gap: var(--sp-4); }
+  .refs > li { display: grid; grid-template-columns: 44px 1fr; gap: var(--sp-3); padding-bottom: var(--sp-4); border-bottom: 1px solid var(--ui-border); }
+  .refs > li:target { background: var(--brand-primary-soft); border-radius: var(--r-md); }
+  .refs .no { font-weight: var(--fw-bold); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .refs .cite { margin: 0; line-height: 1.7; } .refs .cite a { word-break: break-all; }
+  .refs dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--sp-4); margin: var(--sp-3) 0 0; font-size: var(--fs-sm); }
+  .refs dt { color: var(--text-muted); } .refs dd { margin: 0; color: var(--text-secondary); }
+  .refs code { font-size: 12px; background: var(--ui-surface-2); border-radius: 4px; padding: 1px 5px; }
+  .refs ul.notes { margin: 0; padding-left: 18px; }
+  .src-group { font-size: var(--fs-h2); margin: var(--section-gap) 0 var(--sp-4); }
+  .src-group:first-of-type { margin-top: 0; }
+  @media (max-width: 640px) { .refs > li { grid-template-columns: 1fr; gap: 2px; } .refs dl { grid-template-columns: 1fr; gap: 0; } .refs dd { margin-bottom: 6px; } }
+  /* 업종 · 인구와 수요 · 교차분석 */
+  .seg-scroll { max-width: 100%; overflow-x: auto; scrollbar-width: none; } .seg-scroll button { white-space: nowrap; flex: none; }
+  .lq-wrap { overflow-x: auto; }
+  table.lq { border-collapse: separate; border-spacing: 2px; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; width: 100%; min-width: 640px; }
+  table.lq th { font-weight: var(--fw-medium); color: var(--text-secondary); padding: 6px 4px; white-space: nowrap; }
+  table.lq thead th { font-size: 11px; } table.lq tbody th { text-align: right; padding-right: 8px; }
+  table.lq td { text-align: center; padding: 7px 2px; border-radius: 4px; }
+  table.lq th.on, table.lq tr.on th { color: var(--text-primary); font-weight: var(--fw-bold); }
+  table.lq td.on, table.lq tr.on td { outline: 2px solid var(--text-primary); outline-offset: -2px; }
+  .cross-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .cross-ctrl label { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); color: var(--text-secondary); }
+  .cross-ctrl select, .rp-addpair select { max-width: min(78vw, 320px); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--sp-5); }
+  .chip { font: inherit; font-size: var(--fs-xs); border: 1px solid var(--ui-border); background: var(--ui-surface); color: var(--text-secondary); border-radius: var(--r-pill); padding: 5px 12px; cursor: pointer; }
+  .chip:hover { border-color: var(--brand-primary); color: var(--brand-primary-ink); } .chip:disabled { opacity: .45; cursor: not-allowed; }
+  #crossStats { display: grid; gap: var(--sp-3); align-content: start; }
+  #crossStats .stat { display: grid; gap: 2px; padding-bottom: var(--sp-3); border-bottom: 1px solid var(--ui-border); }
+  #crossStats .stat span { font-size: var(--fs-xs); color: var(--text-muted); } #crossStats .stat b { font-size: clamp(28px, 3vw, 36px); line-height: 1.1; }
+  #crossStats .stat small { font-size: var(--fs-sm); color: var(--text-secondary); }
+  .side-notes { margin: 0; padding-left: 18px; font-size: var(--fs-sm); color: var(--text-secondary); display: grid; gap: 6px; }
+  /* 보고서 */
+  .rp-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-5); margin-bottom: var(--sp-8); }
+  @media (max-width: 900px) { .rp-controls { grid-template-columns: 1fr; } }
+  .rp-title { display: grid; gap: 6px; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+  .rp-title input { font: inherit; font-weight: 400; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--ui-border); background: var(--ui-surface-2); color: var(--text-primary); }
+  .rp-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-2); }
+  .rp-area { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-3); border: 1px solid var(--ui-border); border-radius: var(--r-md); cursor: pointer; }
+  .rp-area:has(input:checked) { border-color: var(--brand-primary); background: var(--brand-primary-soft); }
+  .rp-area input { margin-top: 3px; accent-color: var(--brand-primary); } .rp-area span { display: grid; } .rp-area small { color: var(--text-muted); font-size: 12px; }
+  .rp-pairs { list-style: none; margin: var(--sp-3) 0; padding: 0; display: grid; gap: 6px; }
+  .rp-pairs li { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--sp-2); padding: 8px 10px; border-radius: var(--r-md); background: var(--ui-surface-2); font-size: var(--fs-sm); }
+  .rp-pairs li small { grid-column: 1; color: var(--text-muted); font-size: 12px; } .rp-pairs li button { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+  .rp-pairs li.off span { color: var(--text-muted); text-decoration: line-through; }
+  .rp-addpair { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .rp-addpair select { flex: 1 1 140px; min-width: 0; }
+  .report { background: var(--ui-surface); border-radius: var(--r-xl); padding: clamp(20px, 4vw, 56px); max-width: 960px; margin: 0 auto; box-shadow: var(--sh-pop); }
+  section.band:nth-of-type(even) .report .card { background: var(--ui-surface); }
+  .rp-cover { border-bottom: 2px solid var(--text-primary); padding-bottom: var(--sp-5); margin-bottom: var(--sp-6); }
+  .rp-cover h1 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.2; margin: var(--sp-4) 0 var(--sp-2); }
+  .rp-meta { margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); } .rp-note { font-size: 12px; color: var(--text-muted); margin: var(--sp-2) 0 0; }
+  .rp-toc { margin: var(--sp-4) 0 0; padding-left: 20px; columns: 2; font-size: var(--fs-sm); color: var(--text-secondary); }
+  .rp-sec { margin-top: var(--sp-8); } .rp-sec h2 { font-size: var(--fs-h2); margin: 0 0 var(--sp-3); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--ui-border); }
+  .rp-sub h3 { font-size: var(--fs-h3); margin: var(--sp-5) 0 var(--sp-2); }
+  .rp-bullets { margin: 0 0 var(--sp-4); padding-left: 20px; display: grid; gap: 6px; line-height: 1.65; }
+  .rp-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-4); }
+  .rp-fig { margin: 0; padding: var(--sp-4); border: 1px solid var(--ui-border); }
+  .rp-fig figcaption { display: grid; gap: 2px; margin-bottom: var(--sp-2); font-size: var(--fs-sm); } .rp-fig figcaption span { font-size: 12px; color: var(--text-muted); }
+  .rp-fig .legend:empty, .rp-fig .map-legend:empty { display: none; }
+  .rp-fig .plot svg { max-height: 460px !important; }
+  .rp-src, .rp-skip { font-size: 12px; color: var(--text-muted); margin: var(--sp-3) 0 0; }
+  .rp-table { margin-top: var(--sp-2); } .rp-refs ol { padding-left: 28px; font-size: var(--fs-sm); line-height: 1.7; color: var(--text-secondary); word-break: break-all; }
+  @media print {
+    @page { size: A4; margin: 14mm 12mm; }
+    html, body { background: #fff !important; }
+    body > :not(main), main > section:not(#report), #report > :not(#reportDoc) { display: none !important; }
+    #report { padding: 0 !important; background: #fff !important; }
+    .report { box-shadow: none; padding: 0; max-width: none; border-radius: 0; }
+    .rp-fig, .rp-bullets li, .rp-table tr { break-inside: avoid; }
+    .rp-sec h2, .rp-sub h3 { break-after: avoid; }
+    .rp-sec + .rp-sec { break-before: auto; }
+    .tip { display: none !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
+  }
+  /* 한눈에 지도 */
+  #overview { padding-top: var(--sp-8); }
+  #overview > h2 { font-size: var(--fs-h1); }
+  #overview > .lead { margin-bottom: var(--sp-4); }
+  .map-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+  @media (max-width: 900px) { .map-layout { grid-template-columns: 1fr; } }
+  .map-legend { display: flex; flex-wrap: wrap; gap: 6px var(--sp-3); font-size: var(--fs-xs); color: var(--text-secondary); margin: var(--sp-2) 0 var(--sp-3); }
+  .map-legend span { display: inline-flex; align-items: center; gap: 6px; } .map-legend i { width: 14px; height: 10px; border-radius: 3px; }
+  #cMap .plot svg g:focus { outline: none; } 
+  .side-big { font-size: clamp(32px, 3.2vw, 44px); font-weight: var(--fw-bold); line-height: 1.1; margin: var(--sp-2) 0; }
+  .side-big small { font-size: var(--fs-body); color: var(--text-secondary); font-weight: var(--fw-medium); margin-left: 4px; }
+  .side-list { list-style: none; margin: var(--sp-4) 0 0; padding: 0; display: grid; gap: 2px; }
+  .side-list li { display: flex; justify-content: space-between; gap: var(--sp-3); padding: 8px 0; border-bottom: 1px solid var(--ui-border); font-size: var(--fs-sm); }
+  .side-list li span:first-child { color: var(--text-secondary); } .side-list li b { font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { #cMap { padding: var(--sp-4) var(--sp-3); } }
+  @media (max-width: 640px) { .fbar { gap: 6px 8px; padding: 8px var(--page-inset); } .fnote, .flabel { display: none; } .fbar select { max-width: 34vw; } .fbtn { padding: 6px 10px; } }
+  @media (max-width: 640px) { .chapter ul { justify-content: flex-start; } .hdr .hide-m { display: none; } .timeline li { grid-template-columns: 56px 1fr; } .timeline .amt { grid-column: 2; } }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo"><i></i>K-Content Market Pulse</div>
+  <div class="hdr-r"><span class="hide-m" style="font-size:12px;color:var(--text-muted)">초안 v0.4 · KOSIS ~2024 · 지방재정 ~2026 · 인허가 ~2025</span><span class="role-badge hide-m" id="roleBadge" hidden></span><button class="btn hide-m" id="pwChange" hidden>비밀번호 변경</button><button class="btn hide-m" id="lockNow">잠금</button><button class="btn" id="theme">다크 모드</button></div>
+</header>
+
+<nav class="chapter" aria-label="챕터 바로가기"><ul>
+  <li><a href="#"><svg viewBox="0 0 36 36"><rect x="5" y="5" width="11" height="11" rx="3"/><rect x="20" y="5" width="11" height="11" rx="3"/><rect x="5" y="20" width="11" height="11" rx="3"/><rect x="20" y="20" width="11" height="11" rx="3"/></svg>한눈에</a></li>
+  <li><a href="#sales"><svg viewBox="0 0 36 36"><path d="M6 28l8-9 6 5 10-13"/><path d="M24 11h6v6"/></svg>매출</a></li>
+  <li><a href="#genre"><svg viewBox="0 0 36 36"><rect x="6" y="6" width="10" height="10" rx="2"/><circle cx="25" cy="11" r="5"/><path d="M6 30l5-9 5 9z"/><path d="M21 21h8v8h-8z"/></svg>업종</a></li>
+  <li><a href="#region"><svg viewBox="0 0 36 36"><path d="M18 31s-9-8.5-9-15a9 9 0 0118 0c0 6.5-9 15-9 15z"/><circle cx="18" cy="16" r="3"/></svg>지역</a></li>
+  <li><a href="#biz"><svg viewBox="0 0 36 36"><path d="M8 30V14l10-6 10 6v16"/><path d="M14 30v-8h8v8"/></svg>창업·소멸</a></li>
+  <li><a href="#budget"><svg viewBox="0 0 36 36"><rect x="6" y="10" width="24" height="18" rx="3"/><path d="M6 16h24M22 22h4"/></svg>예산</a></li>
+  <li><a href="#demand"><svg viewBox="0 0 36 36"><circle cx="13" cy="12" r="4"/><circle cx="24" cy="13" r="3"/><path d="M5 29c0-5 4-9 8-9s8 4 8 9"/><path d="M20 22c1-1 2.5-2 4-2 3.5 0 6 3 6 7"/></svg>인구·수요</a></li>
+  <li><a href="#policy"><svg viewBox="0 0 36 36"><path d="M10 6h12l6 6v18H10z"/><path d="M22 6v6h6M14 18h10M14 23h8"/></svg>정책</a></li>
+  <li><a href="#cross"><svg viewBox="0 0 36 36"><path d="M7 7v22h22"/><circle cx="13" cy="22" r="2"/><circle cx="18" cy="17" r="2"/><circle cx="23" cy="15" r="2"/><circle cx="27" cy="10" r="2"/><path d="M11 25L29 9" stroke-dasharray="2 3"/></svg>교차분석</a></li>
+  <li><a href="#report"><svg viewBox="0 0 36 36"><path d="M9 5h13l6 6v20H9z"/><path d="M22 5v6h6"/><path d="M13 25v-4M17 25v-7M21 25v-5M25 25v-9"/></svg>보고서</a></li>
+  <li><a href="#sources"><svg viewBox="0 0 36 36"><path d="M7 8c4-2 8-2 11 1v20c-3-3-7-3-11-1z"/><path d="M29 8c-4-2-8-2-11 1v20c3-3 7-3 11-1z"/></svg>데이터 소스</a></li>
+</ul></nav>
+
+<div class="page-head">
+  <h1>콘텐츠 시장, 지역별로 한눈에.</h1>
+  <p>매출·사업체·창업과 소멸·지자체 예산을 지역별로 비교합니다. 데이터는 국가통계포털(KOSIS)의 콘텐츠산업조사, 기업생멸행정통계, 창업기업동향, 공연예술조사입니다.</p>
+</div>
+
+<div class="fbar" id="fbar" role="region" aria-label="필터">
+  <div class="fgroup">
+    <span class="flabel" id="periodLbl">기간</span>
+    <button class="fbtn" id="periodBtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="periodLbl periodBtn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span id="periodTxt">2010 – 2026</span></button>
+    <div class="cal" id="cal" role="dialog" aria-label="기간 선택" hidden>
+      <div class="seg cal-mode" role="group" aria-label="선택 방식"><button type="button" data-mode="year" aria-pressed="false">특정 연도</button><button type="button" data-mode="range" aria-pressed="true">기간</button></div>
+      <div class="cal-pre"><button data-pre="3">최근 3년</button><button data-pre="5">최근 5년</button><button data-pre="10">최근 10년</button><button data-pre="all">전체</button></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <p class="cal-hint" id="calHint">시작 연도를 누른 뒤 끝 연도를 누르세요.</p>
+    </div>
+  </div>
+  <div class="fgroup"><label class="flabel" for="regionSel">지역</label><select id="regionSel"></select></div>
+  <div class="fgroup"><label class="flabel" for="genreSel">업종</label><select id="genreSel"></select></div>
+  <button class="fbtn ghost" id="fReset">초기화</button>
+  <span class="fnote" id="fNote"></span>
+</div>
+
+<main>
+<!-- ============ 한눈에 ============ -->
+<section class="band" id="overview">
+  <h2>한눈에.</h2>
+  <p class="lead">시도별로 한 장에 놓고 비교합니다. 지도에서 지역을 누르면 선택되어 모든 페이지에 반영됩니다.</p>
+  <div class="toolbar"><div class="seg" role="group" aria-label="지도 지표" id="mapMetric"></div></div>
+  <div class="map-layout">
+    <div class="card" id="cMap">
+      <div class="card-h"><div><h3 id="tMap">시도별 지도</h3><div class="cap" id="capMap"></div></div><button class="view">표로 보기</button></div>
+      <div class="map-legend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot" id="footMap"></div>
+    </div>
+    <div class="card" id="cMapSide" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ 상세 페이지 바로가기 ============ -->
+<section class="band" id="pages">
+  <h2 style="font-size:var(--fs-h1)">자세히 보기.</h2>
+  <p class="lead">영역별 차트는 각자의 페이지에 있습니다. 위에서 고른 기간·지역·업종이 그대로 적용됩니다.</p>
+  <div class="pagegrid" id="pageCards"></div>
+</section>
+
+<!-- ============ 매출 ============ -->
+<section class="band" id="sales">
+  <h2>매출.</h2>
+  <p class="lead" id="salesLead">콘텐츠산업 매출의 흐름과 장르 구성을 봅니다.</p>
+  <div class="toolbar"><span style="font-size:var(--fs-sm);color:var(--text-secondary)" id="kpiTitle"></span>
+    <div class="paddles"><button aria-label="이전" data-rail="-1">&lsaquo;</button><button aria-label="다음" data-rail="1">&rsaquo;</button></div></div>
+  <div class="rail-wrap"><div class="rail" id="kpiRail"></div></div>
+
+  <div class="grid2">
+    <div class="card" id="cSalesTrend">
+      <div class="card-h"><div><h3 id="tSalesTrend">매출 추이</h3><div class="cap">단위: 원 (백만원 원자료를 조·억으로 표시)</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span class="warnbadge">⚠ 시계열 단절</span><span>2012·2014·2020·2023년 조사 개편. 점선 구간은 개편 전후라 그대로 이어 해석하지 마세요.</span></div>
+      <div class="foot">출처: KOSIS 「콘텐츠산업조사」 지역별 매출액 현황 · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=113&tblId=DT_113_STBL_1024763&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+    <div class="card" id="cGenreMix">
+      <div class="card-h"><div><h3>지역별 장르 구성 (2024)</h3><div class="cap">각 지역 매출 = 100% · 11개 장르</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="genreLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">세종 게임·충북 애니메이션은 원표 값 없음. 출처: KOSIS 「콘텐츠산업조사」 · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=113&tblId=DT_113_STBL_1024763&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+  </div>
+  <div class="callout">제주의 매출(2024년 5.1조 원) 가운데 지식정보가 3.3조, 게임이 1.5조 원입니다. 본사가 제주에 있는 대형 플랫폼 기업의 실적이 반영된 것으로 보여, 지역 산업 생태계 규모로 그대로 읽으면 안 됩니다.</div>
+</section>
+
+<!-- ============ 지역 ============ -->
+<section class="band" id="region">
+  <h2>지역.</h2>
+  <p class="lead">17개 시도를 같은 기준으로 줄 세워 봅니다. 서울 집중도와 2023→2024 변화를 함께 확인하세요.</p>
+  <div class="toolbar"><div class="seg" role="group" aria-label="지표" id="regMetric">
+    <button aria-pressed="true" data-k="rev">매출</button><button aria-pressed="false" data-k="est">사업체</button><button aria-pressed="false" data-k="emp">종사자</button></div>
+    <button class="fbtn" id="exSeoul" aria-pressed="false" title="서울 막대가 너무 길어 다른 시도의 차이가 묻힐 때 켜세요">서울 제외</button></div>
+  <div class="grid2">
+    <div class="card" id="cRegRank">
+      <div class="card-h"><div><h3 id="tRegRank">시도별 규모 (2024)</h3><div class="cap" id="capRegRank"></div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「콘텐츠산업조사」 지역별 매출액·사업체 수·종사자 현황</div>
+    </div>
+    <div class="card" id="cRegDelta">
+      <div class="card-h"><div><h3 id="tRegDelta">전년 대비 증감률 (2023→2024)</h3><div class="cap">파랑 = 증가, 빨강 = 감소</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>2023·2024년은 모두 개편(2023 모집단 변경) 이후 기준입니다.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 창업·소멸 ============ -->
+<section class="band" id="biz">
+  <h2>창업과 소멸.</h2>
+  <p class="lead">콘텐츠산업만 따로 집계한 창업·폐업 통계는 없어, 콘텐츠가 속한 산업대분류(정보통신업, 예술·스포츠·여가업)로 대신 봅니다. 콘텐츠 외 업종도 섞여 있습니다.</p>
+  <div class="toolbar"><div class="seg" role="group" aria-label="산업" id="bizInd">
+    <button aria-pressed="true" data-k="J">정보통신업</button><button aria-pressed="false" data-k="R">예술·스포츠·여가</button></div></div>
+  <div class="grid2">
+    <div class="card" id="cBirthDeath">
+      <div class="card-h"><div><h3 id="tBirthDeath">신생·소멸 기업 수</h3><div class="cap">기업생멸행정통계 · 기업 규모 전체</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="bdLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「기업생멸행정통계」 시도별 산업대분류별 기업 수(활동/신생/소멸) · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_6BD1105&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+    <div class="card" id="cStartup">
+      <div class="card-h"><div><h3 id="tStartup">창업기업 수</h3><div class="cap">창업기업동향 · 2025년까지</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>기업생멸행정통계의 '신생기업'과 정의·집계 기준이 달라 값이 다릅니다. 두 차트를 이어 붙여 읽지 마세요.</span></div>
+      <div class="foot">출처: KOSIS 「창업기업동향」 지역별·업종별 창업기업수 · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=142&tblId=DT_142N_F205&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+  </div>
+
+  <h3 style="font-size:var(--fs-h2);margin:var(--section-gap) 0 var(--sp-2)">콘텐츠 업종만 따로 보면.</h3>
+  <p class="lead" style="margin-top:0">지자체 인허가 대장으로 게임·음악·영화·비디오·대중문화예술기획·출판 업종의 개업과 폐업을 셉니다. 산업대분류보다 콘텐츠에 가깝습니다.</p>
+  <div class="toolbar"><div class="seg" role="group" aria-label="업종" id="licGroup">
+    <button aria-pressed="true" data-k="전체">전체</button><button aria-pressed="false" data-k="게임">게임</button><button aria-pressed="false" data-k="음악">음악</button><button aria-pressed="false" data-k="영화·비디오">영화·비디오</button><button aria-pressed="false" data-k="대중문화예술기획">대중문화예술</button><button aria-pressed="false" data-k="출판">출판</button></div></div>
+  <div class="grid2">
+    <div class="card" id="cLic">
+      <div class="card-h"><div><h3 id="tLic">콘텐츠 업종 개업·폐업 (인허가 기준)</h3><div class="cap">2010–2025 · 개업 = 인허가일, 폐업 = 폐업일(없으면 인허가 취소일)</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="licLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot" id="licFoot"><span>폐업 상태인데 폐업일이 비어 있는 업체는 연도 집계에서 뺐습니다. 업체 하나가 여러 업종으로 등록된 경우 각각 셉니다.</span></div>
+      <div class="foot">출처: 행정안전부 지방행정 인허가 데이터(공공데이터포털 「행정안전부_문화_○○ 조회서비스」, 「행정안전부_기타_출판사」)</div>
+    </div>
+    <div class="card" id="cLicStock">
+      <div class="card-h"><div><h3 id="tLicStock">연말 영업 중 업체 수 (추정)</h3><div class="cap">그해 말까지 인허가 받았고 폐업하지 않은 업체</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>현재 대장을 거꾸로 계산한 추정치입니다. 과거에 삭제된 기록은 반영되지 않습니다.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 예산 ============ -->
+<section class="band" id="budget">
+  <h2>예산.</h2>
+  <p class="lead">위 두 차트는 KOSIS 공연예술조사의 지자체 문화예산(2024까지)입니다. 콘텐츠 전용이 아닌 문화 분야 전체 예산이며, 국비·지방비 구분은 아래 지방재정365 자료로 봅니다.</p>
+  <div class="grid2">
+    <div class="card" id="cBudgetTrend">
+      <div class="card-h"><div><h3 id="tBudgetTrend">문화예산 추이</h3><div class="cap">문화예산 ⊃ 문화예술예산</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="budLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span class="warnbadge">⚠ 시계열 단절</span><span>공연예술조사 2019·2023년 개편.</span></div>
+      <div class="foot">출처: KOSIS 「공연예술조사」 지방자치단체 총예산/문화예산/문화예술예산 지역별 현황 · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=113&tblId=DT_113_STBL_1025600&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+    <div class="card" id="cBudgetShare">
+      <div class="card-h"><div><h3 id="tBudgetShare">총예산 대비 문화예산 비중</h3><div class="cap">같은 표의 문화예산 ÷ 총예산</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「공연예술조사」</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:var(--fs-h2);margin:var(--section-gap) 0 var(--sp-2)">국비·시도비·시군구비, 누가 얼마나 넣었나.</h3>
+  <p class="lead" style="margin-top:0">지방재정365의 '문화및관광' 분야 세출예산(당초)을 재원별로 나눴습니다. 2020–2026년, 광역 본청과 시군구를 합한 총계 기준입니다.</p>
+  <div class="grid2">
+    <div class="card" id="cFinMix">
+      <div class="card-h"><div><h3 id="tFinMix">시도별 문화및관광 예산의 재원 구성</h3><div class="cap">각 시도 문화및관광 세출 = 100%</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="finLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>국비 = 국고·지특·기금 보조금 · 교부세 등 = 특별교부세·소방안전교부세·지방소멸대응기금 · 시도비 = 광역 부담(본청 자체+시군구로 내려간 도비) · 기타 = 지방채·민자·특별교부금 등</span></div>
+    </div>
+    <div class="card" id="cFinTrend">
+      <div class="card-h"><div><h3 id="tFinTrend">문화및관광 예산 재원별 추이</h3><div class="cap">2020–2026 당초예산 · 선택한 지역</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="finTrendLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>총계 기준이라 광역이 시군구에 내려보낸 보조금은 양쪽(본청 지출·시군구 재원)에 모두 잡힙니다. 금액 크기보다 구성과 추세를 보세요.</span></div>
+    </div>
+  </div>
+  <div class="card" id="cFinShare" style="margin-top:var(--sp-5)">
+    <div class="card-h"><div><h3 id="tFinShare">전체 세출 중 문화및관광 비중</h3><div class="cap">같은 자료의 문화및관광 ÷ 전 분야 합계</div></div><button class="view">표로 보기</button></div>
+    <div class="plot"></div><div class="tableview"></div>
+    <div class="foot">출처: 지방재정365 재정 데이터셋 「기능별 재원별 세출예산」(행정안전부, 2020–2026) · KOSIS 공연예술조사의 '문화예산'과는 다른 통계라 섞지 않았습니다.</div>
+  </div>
+</section>
+
+<!-- ============ 정책 ============ -->
+<section class="band" id="policy">
+  <h2>정책.</h2>
+  <p class="lead">법령 개정과 국가·지자체 재정을 연도별로 놓고, 선택한 지역의 콘텐츠 매출과 겹쳐 봅니다. 시점이 겹친다고 정책의 효과라고 단정할 수는 없으니, 변화를 짚어 보는 출발점으로 쓰세요.</p>
+
+  <div class="card" id="cLaw">
+    <div class="card-h"><div><h3>법령 개정 타임라인 (2010–2026)</h3><div class="cap">◆ 제정·전부개정 &nbsp;● 일부개정(해당 법 자체 개정) &nbsp;○ 타법개정(다른 법 개정에 따른 반영)</div></div><button class="view">표로 보기</button></div>
+    <div class="plot"></div><div class="tableview"></div>
+    <div class="foot">출처: 국가법령정보센터 법령 연혁(업로드 자료) · 개정 내용은 연혁 목록에 없어, 주요 개정의 조문 요약은 추가 자료가 필요합니다.</div>
+  </div>
+
+  <div class="card" id="cPolicyOverlay" style="margin-top:var(--sp-5)">
+    <div class="card-h"><div><h3 id="tPolicyOverlay">정책 이벤트와 매출</h3><div class="cap">위: 콘텐츠산업 매출 · 아래: 해당 연도에 시행된 자체 개정(◆ 제정·전부개정, ● 일부개정)</div></div></div>
+    <div class="plot"></div>
+    <div class="foot"><span class="warnbadge">⚠ 시계열 단절</span><span>매출은 2012·2014·2020·2023년 조사 개편. 점선 구간은 이어 해석하지 마세요.</span></div>
+    <div class="foot">출처: KOSIS 「콘텐츠산업조사」, 국가법령정보센터 법령 연혁</div>
+  </div>
+
+  <div class="grid2" style="margin-top:var(--sp-5)">
+    <div class="card" id="cNatSpend">
+      <div class="card-h"><div><h3>국가 결산 · 콘텐츠 관련 사업 지출액</h3><div class="cap">2020–2025 결산 · 단위사업 지출액을 분류별로 합산</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="natLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>분류는 단위사업명 기준으로 이 대시보드에서 묶었습니다. 원자료에 부처 구분이 없어 '방송통신 등 기타'에는 다른 부처 사업이 섞여 있습니다.</span></div>
+      <div class="foot">출처: 열린재정 단위사업별 결산현황(업로드 자료)</div>
+    </div>
+    <div class="card" id="cFund">
+      <div class="card-h"><div><h3>모태조합 출자 (정책금융)</h3><div class="cap">2020–2025 결산 지출액 · 중기부 기금 + 소부장 특별회계</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>모태펀드 전체 출자액이라 문화계정만의 금액이 아닙니다. 문화계정 예산(2021 1,148억 · 2022 1,388억 · 2023 1,900억, 문체부 정책실명제)은 별도 자료입니다.</span></div>
+      <div class="foot">출처: 열린재정 단위사업별 결산현황(업로드 자료)</div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:var(--sp-5)">
+    <div class="card" id="cFundMix">
+      <div class="card-h"><div><h3>모태펀드 문화·영화계정 출자 분야 (선정 결과)</h3><div class="cap">연도별 결성예정액 = 100% · 받아두신 선정결과 공고 기준</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="fundMixLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>공고별 분야 금액의 합계가 원문 총액과 일치하는지 확인했습니다. 받지 않은 공고가 있으면 해당 연도 합계는 실제보다 작습니다. 해양·관광·스포츠 계정은 뺐습니다.</span></div>
+      <div class="foot">출처: 한국벤처투자 모태펀드 출자사업 선정 결과(2023–2026, 업로드 PDF)</div>
+    </div>
+    <div class="card" id="cProg26">
+      <div class="card-h"><div><h3>2026 문체부 콘텐츠 세부사업 예산 (상위 15)</h3><div class="cap">국회 확정 · 주황 = 지역콘텐츠 사업</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>지역콘텐츠산업 균형발전 지원(지역균형발전특별회계)은 3개 세부사업 합계 <b id="regionalProg"></b>입니다. 시도별 배분은 이 자료에 없습니다.</span></div>
+      <div class="foot">출처: 열린재정 재정사업 설명자료(분류별검색, 2026, 업로드 자료)</div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:var(--sp-5)">
+    <div class="card" id="cMcst">
+      <div class="card-h"><div><h3>문화체육관광부 세출 결산</h3><div class="cap">2020–2025 · 예산현액과 지출액</div></div><button class="view">표로 보기</button></div>
+      <div class="legend" id="mcstLegend"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>2026 본예산(총지출 기준) <b id="mcst26"></b> — 결산(총계 기준)과 집계 기준이 달라 같은 선에 잇지 않았습니다.</span></div>
+      <div class="foot">출처: 열린재정 부처별 세출결산현황·세출예산현황(업로드 자료)</div>
+    </div>
+    <div class="card" id="cLocalSpend">
+      <div class="card-h"><div><h3 id="tLocalSpend">지자체 세출예산 총계</h3><div class="cap">2020–2026 · 광역 본청 + 기초 합계</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span>지자체 전체 세출이라 문화 분야만의 금액이 아닙니다. 예산 섹션의 '총예산'(KOSIS 공연예술조사)과는 다른 통계라 섞지 않았습니다.</span></div>
+      <div class="foot">출처: 지방재정365 세출예산(업로드 자료)</div>
+    </div>
+  </div>
+
+  <div class="upload" style="margin-top:var(--sp-5)">
+    <b>📥 더 올려주시면 채울 수 있는 것</b>
+    <ul>
+      <li><b>콘텐츠 업종 개·폐업</b>: 공공데이터포털(data.go.kr) 파일데이터 「행정안전부_문화_게임물제작업」「…_음반및음악영상물제작업」「…_영화제작업」「…_비디오물제작업」「…_대중문화예술기획업」「행정안전부_기타_출판사」 등</li>
+      <li><b>열린재정 재정사업 설명자료</b>: 이번 7개 파일은 모두 2026년으로 같은 내용입니다. 2020–2025년은 회계연도를 바꿔 다시 받아야 합니다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 업종 ============ -->
+<section class="band" id="genre">
+  <h2>업종.</h2>
+  <p class="lead" id="genreLead">11개 콘텐츠 장르를 비교합니다.</p>
+  <div class="toolbar"><div class="seg seg-scroll" role="group" aria-label="장르" id="genreSeg"></div></div>
+  <div class="grid2">
+    <div class="card" id="cGenreRank">
+      <div class="card-h"><div><h3 id="tGenreRank">장르별 매출</h3><div class="cap">전국 · 기간 끝 연도</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「콘텐츠산업조사」 지역별 매출액 현황 (전국 합계 행)</div>
+    </div>
+    <div class="card" id="cGenreTrend">
+      <div class="card-h"><div><h3 id="tGenreTrend">장르별 매출 추이</h3><div class="cap">전국 · 단위 원</div></div><button class="view">표로 보기</button></div>
+      <div class="legend"></div><div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span class="warnbadge">⚠ 시계열 단절</span><span>2012·2014·2020·2023년 조사 개편. 방송·영상은 2012년 분류 변경으로 급증, 캐릭터는 2021년에 크게 줄었습니다. 점선 구간은 이어 해석하지 마세요.</span></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" id="cGenreRegRev">
+      <div class="card-h"><div><h3 id="tGenreRegRev">시도별 장르 매출</h3><div class="cap">2024 · 장르별 지역 값은 2024년만 받았습니다</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「콘텐츠산업조사」 지역별 매출액 현황</div>
+    </div>
+    <div class="card" id="cGenreRegEst">
+      <div class="card-h"><div><h3 id="tGenreRegEst">시도별 장르 사업체 수</h3><div class="cap">2024</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">세종 게임·충북 애니메이션은 원표 값이 없습니다. 출처: KOSIS 「콘텐츠산업조사」 지역별 사업체 수 현황</div>
+    </div>
+  </div>
+  <div class="card" id="cLQ" style="margin-top:var(--sp-5)">
+    <div class="card-h"><div><h3>지역 × 장르 특화도 (입지계수, 2024)</h3><div class="cap">(지역 안에서 그 장르 비중) ÷ (전국에서 그 장르 비중) · 1보다 크면 전국보다 그 장르에 쏠림</div></div>
+      <div class="seg" role="group" aria-label="기준" id="lqKind"><button data-k="rev" aria-pressed="true">매출</button><button data-k="est" aria-pressed="false">사업체</button></div></div>
+    <div class="map-legend"></div><div class="plot"></div><div class="tableview"></div>
+    <div class="foot"><span>규모가 작은 지역은 사업체 몇 곳만으로도 값이 크게 흔들립니다. 굵게 표시된 행·열은 선택한 지역·업종입니다.</span></div>
+  </div>
+  <div class="card" id="cGenreEff" style="margin-top:var(--sp-5)">
+    <div class="card-h"><div><h3>장르별 사업체당 매출 (전국, 2024)</h3><div class="cap">매출 ÷ 사업체 수 — 같은 조사의 서로 다른 통계표로 계산</div></div><button class="view">표로 보기</button></div>
+    <div class="plot"></div><div class="tableview"></div>
+    <div class="foot"><span class="warnbadge">⚠ 통계표 연결 주의</span><span>서로 다른 통계표(매출액 표·사업체 수 표)를 나눈 값입니다. 통계표 간 정의가 상이할 수 있으므로 주의가 필요합니다.</span></div>
+  </div>
+</section>
+
+<!-- ============ 인구와 수요 ============ -->
+<section class="band" id="demand">
+  <h2>인구와 수요.</h2>
+  <p class="lead">콘텐츠를 소비하는 사람의 규모(인구), 구성(고령화), 구매력(소득)을 보고, 인구에 견준 시장 규모를 비교합니다. 수요를 직접 재는 통계는 아니고 수요 기반을 보여주는 대리지표입니다.</p>
+  <div class="grid2">
+    <div class="card" id="cPop">
+      <div class="card-h"><div><h3 id="tPop">인구 추이</h3><div class="cap">주민등록인구 · 2016–2025</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS e-지방지표 「고령인구비율(시도/시/군/구)」 전체인구 (행정안전부 주민등록인구) · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1YL20631&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+    <div class="card" id="cOld">
+      <div class="card-h"><div><h3 id="tOld">고령인구비율</h3><div class="cap">65세 이상 인구 ÷ 전체 인구</div></div><button class="view">표로 보기</button></div>
+      <div class="legend"></div><div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: 같은 표 (DT_1YL20631)</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" id="cInc">
+      <div class="card-h"><div><h3 id="tInc">1인당 개인소득</h3><div class="cap">2015–2022 · 받은 표는 2022년까지 수록</div></div><button class="view">표로 보기</button></div>
+      <div class="legend"></div><div class="plot"></div><div class="tableview"></div>
+      <div class="foot">출처: KOSIS 「지역소득」 시도별 1인당 지역내총생산, 지역총소득, 개인소득 · <a href="https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1C86&vw_cd=MT_ZTITLE&conn_path=MT_ZTITLE" target="_blank" rel="noopener">KOSIS 바로가기</a></div>
+    </div>
+    <div class="card" id="cPerCap">
+      <div class="card-h"><div><h3 id="tPerCap">시도별 1인당 지표</h3><div class="cap pcnote"></div></div><button class="view">표로 보기</button></div>
+      <div class="seg seg-scroll" role="group" aria-label="1인당 지표" id="perCapSeg" style="margin-bottom:var(--sp-3)"></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot"><span class="warnbadge">⚠ 통계표 연결 주의</span><span>콘텐츠산업조사·지자체 예산을 주민등록인구로 나눈 값입니다. 서로 다른 통계표를 연결한 자료라 통계표 간 정의가 상이할 수 있으므로 주의가 필요합니다.</span></div>
+    </div>
+  </div>
+  <div class="card" id="cMktIdx" style="margin-top:var(--sp-5)">
+    <div class="card-h"><div><h3 id="tMktIdx">인구 대비 콘텐츠 사업체 집중도</h3><div class="cap">(전국 대비 사업체 비중) ÷ (전국 대비 인구 비중) · 1보다 크면 인구에 비해 사업체가 많음 · 표에 매출 지수도 있음</div></div><button class="view">표로 보기</button></div>
+    <div class="plot"></div><div class="tableview"></div>
+    <div class="foot"><span>매출은 본사 소재지 기준이라 서울·제주처럼 대형 기업이 있는 곳에서 크게 부풀려집니다. 그래서 차트는 사업체 기준으로 그렸습니다.</span></div>
+  </div>
+</section>
+
+<!-- ============ 교차분석 ============ -->
+<section class="band" id="cross">
+  <h2>교차분석.</h2>
+  <p class="lead">두 지표를 골라 17개 시도가 어떻게 함께 움직이는지 봅니다. 두 지표가 함께 수록된 연도 가운데 선택 기간의 끝 연도로 분석하고, 기간이 겹치지 않는 조합은 고를 수 없게 막아 둡니다.</p>
+  <div class="cross-ctrl">
+    <label>가로축(X) <select id="crossX"></select></label>
+    <button class="fbtn" id="crossSwap" title="가로·세로 바꾸기">⇄</button>
+    <label>세로축(Y) <select id="crossY"></select></label>
+    <button class="fbtn" id="crossExSeoul" aria-pressed="false">서울 제외</button>
+    <button class="fbtn" id="crossLog" aria-pressed="false">로그 축</button>
+    <button class="btn btn-primary" id="crossAdd">보고서에 추가</button>
+  </div>
+  <div class="chips" id="crossSuggest" aria-label="추천 조합"></div>
+  <div class="map-layout">
+    <div class="card" id="cCross">
+      <div class="card-h"><div><h3 id="tCross">교차분석</h3><div class="cap">점 = 시도 · 점선 = 추세선 · 점을 누르면 그 지역 선택</div></div><button class="view">표로 보기</button></div>
+      <div class="plot"></div><div class="tableview"></div>
+      <div class="foot" id="crossSrc"></div>
+    </div>
+    <div class="card" id="crossStats" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ 보고서 ============ -->
+<section class="band" id="report">
+  <h2>보고서.</h2>
+  <p class="lead">넣을 영역을 고르면 아래에 인쇄용 보고서가 바로 만들어집니다. 위 필터의 지역·기간·업종이 그대로 적용됩니다. '인쇄 / PDF 저장'에서 프린터 대신 'PDF로 저장'을 고르면 파일로 받을 수 있습니다.</p>
+  <div class="rp-controls">
+    <div class="card">
+      <label class="rp-title">보고서 제목 <input id="rpTitle" type="text" placeholder="비워 두면 '지역 콘텐츠 시장 보고서'"></label>
+      <p class="cap" id="rpScope"></p>
+      <div class="toolbar" style="margin:var(--sp-4) 0 var(--sp-2)"><b>넣을 영역</b><button class="fbtn ghost" id="rpAll">전체 선택/해제</button></div>
+      <div class="rp-areas" id="rpAreas"></div>
+    </div>
+    <div class="card">
+      <b>교차분석 조합</b>
+      <p class="cap">'교차분석' 영역을 고르면 아래 조합이 들어갑니다. 지금 기간에 함께 수록된 연도가 없는 조합은 빠집니다.</p>
+      <ul class="rp-pairs" id="rpPairs"></ul>
+      <div class="rp-addpair"><select id="rpX" aria-label="가로축 지표"></select><span>×</span><select id="rpY" aria-label="세로축 지표"></select><button class="fbtn" id="rpAddPair">추가</button></div>
+      <button class="btn btn-primary" id="rpPrint" style="margin-top:var(--sp-5);width:100%">인쇄 / PDF 저장</button>
+    </div>
+  </div>
+  <article class="report" id="reportDoc" aria-label="보고서 미리보기"></article>
+</section>
+
+<!-- ============ 데이터 소스 ============ -->
+<section class="band" id="sources">
+  <h2>데이터 소스.</h2>
+  <p class="lead">이 대시보드가 쓰는 모든 자료의 출처를 참고문헌 형식으로 정리했습니다. 각 항목에 원 통계표·바로가기, 수록 기간, 대시보드 파일, 쓰인 화면, 해석할 때 주의할 점을 적었습니다. 수치를 인용할 때는 원 출처를 함께 밝혀 주세요.</p>
+  <div class="src-kinds" id="srcKinds"></div>
+  <div id="srcList"></div>
+  <div class="callout">대시보드 숫자는 위 자료를 그대로 옮기거나 단위만 바꾼 값입니다. 예외는 각 항목의 <b>가공 방식</b>에 적었습니다(분류 묶기, 합산, 추정치). 모든 파일에서 17개 시도 합계가 전국 값과 일치하는지(반올림 차이 ±2 이내) 확인했습니다.</div>
+</section>
+</main>
+
+<footer>
+  <div>⚠️ 본 대시보드는 국가통계포털(KOSIS) 데이터를 활용한 초안이며, 수치 해석은 참고용입니다. 서로 다른 통계표(예: 기업생멸행정통계와 창업기업동향)는 정의가 달라 같은 계열로 잇지 않았습니다.</div>
+  <div>출처: 국가통계포털 KOSIS — 문화체육관광부·한국콘텐츠진흥원 「콘텐츠산업조사」, 국가데이터처 「기업생멸행정통계」, 중소벤처기업부 「창업기업동향」, 문화체육관광부 「공연예술조사」 · 수집일 2026-11-04</div>
+  <div><a href="#sources">데이터 소스 전체 보기 →</a></div>
+  <div>정책 자료: 국가법령정보센터 법령 연혁, 열린재정 부처별·단위사업별 결산(2020–2025)·세출예산(2026), 지방재정365 세출예산(2020–2026) — 사용자 업로드 자료</div>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
