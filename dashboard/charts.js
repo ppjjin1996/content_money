@@ -342,40 +342,54 @@ export function geoMap(host, items, opts) {
   const tip = tooltip(host);
   const [ix, iy, iw, ih] = KOREA_INSET; // 울릉도·독도 인셋
   svgEl("rect", { x: ix, y: iy, width: iw, height: ih, rx: 4, fill: "none", stroke: css("--chart-axis"), "stroke-dasharray": "3 3" }, svg);
-  const shapes = svgEl("g", {}, svg), labels = svgEl("g", { "pointer-events": "none" }, svg);
-  let selG = null;
+  // 테두리 강조는 도형 위의 별도 층에 그림 — 도형을 맨 위로 옮기면(DOM 이동) 브라우저가 클릭을 취소함
+  const shapes = svgEl("g", {}, svg), edges = svgEl("g", { "pointer-events": "none" }, svg), labels = svgEl("g", { "pointer-events": "none" }, svg);
+  const hovEdge = svgEl("path", { fill: "none", stroke: ink0, "stroke-width": 1.5, "stroke-linejoin": "round", opacity: 0 }, edges);
+  const selEdge = svgEl("path", { fill: "none", stroke: ink0, "stroke-width": 2.5, "stroke-linejoin": "round", opacity: 0 }, edges);
+  const pick = (label) => opts.onPick && opts.onPick(label);
+  const textW = (t, est) => { try { return t.getComputedTextLength() || est; } catch { return est; } };
   items.forEach((d) => {
     const path = KOREA_PATH[d.label]; if (!path) return;
     const has = d.value != null && isFinite(d.value), bi = has ? binOf(d.value) : -1, sel = opts.highlight === d.label;
     const g = svgEl("g", { tabindex: 0, role: "button", "aria-label": `${d.label} ${has ? opts.fmt(d.value) : "자료 없음"}`, style: "cursor:pointer" }, shapes);
-    const p = svgEl("path", { d: path, fill: has ? colors[bi] : css("--ui-surface-2"), stroke: surf, "stroke-width": 1, "stroke-linejoin": "round" }, g);
-    if (sel) { p.setAttribute("stroke", ink0); p.setAttribute("stroke-width", 2.5); selG = g; }
+    svgEl("path", { d: path, fill: has ? colors[bi] : css("--ui-surface-2"), stroke: surf, "stroke-width": 1, "stroke-linejoin": "round" }, g);
+    if (sel) { selEdge.setAttribute("d", path); selEdge.setAttribute("opacity", 1); }
     const show = (e) => { const hr = host.getBoundingClientRect(); tip.show(`<strong>${d.label}</strong><div>${has ? opts.fmt(d.value) : "자료 없음"}</div>${opts.note ? `<div>${opts.note(d.label)}</div>` : ""}<div style="opacity:.7">눌러서 이 지역 선택</div>`, e.clientX - hr.left, e.clientY - hr.top); };
+    const hover = (on) => { hovEdge.setAttribute("d", path); hovEdge.setAttribute("opacity", on && !sel ? 1 : 0); };
     g.addEventListener("mousemove", show);
-    g.addEventListener("mouseenter", () => { if (!sel) { p.setAttribute("stroke", ink0); p.setAttribute("stroke-width", 1.5); } g.parentNode.appendChild(g); if (selG && selG !== g) selG.parentNode.appendChild(selG); });
-    g.addEventListener("mouseleave", () => { tip.hide(); if (!sel) { p.setAttribute("stroke", surf); p.setAttribute("stroke-width", 1); } });
-    g.addEventListener("focus", () => { p.setAttribute("stroke", ink0); p.setAttribute("stroke-width", 2.5); });
-    g.addEventListener("blur", () => { if (!sel) { p.setAttribute("stroke", surf); p.setAttribute("stroke-width", 1); } });
-    g.addEventListener("click", () => opts.onPick && opts.onPick(d.label));
-    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onPick && opts.onPick(d.label); } });
+    g.addEventListener("mouseenter", () => hover(true));
+    g.addEventListener("mouseleave", () => { tip.hide(); hover(false); });
+    g.addEventListener("focus", () => hover(true));
+    g.addEventListener("blur", () => hover(false));
+    g.addEventListener("click", () => pick(d.label));
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(d.label); } });
 
     // 이름표
     const [cx, cy] = KOREA_LABEL[d.label], off = CALLOUT[d.label], nud = NUDGE[d.label] || [0, 0];
     const vtxt = has ? opts.fmt(d.value) : "–";
     if (off) {
-      const lx = cx + off[0], ly = cy + off[1];
-      const tw = Math.max(d.label.length * fs, vtxt.length * fv * 0.62) + 12, th = fs + (fv ? fv + 12 : 10), right = off[0] > 0;
-      const bx = right ? lx : lx - tw, by = ly - th / 2;
-      svgEl("line", { x1: cx, y1: cy, x2: right ? bx : bx + tw, y2: ly, stroke: muted, "stroke-width": 1 }, labels);
+      const lx = cx + off[0], ly = cy + off[1], right = off[0] > 0, padL = 14, padR = 10;
+      const th = fs + (fv ? fv + 12 : 10), by = ly - th / 2;
+      const line = svgEl("line", { x1: cx, y1: cy, y2: ly, stroke: muted, "stroke-width": 1 }, labels);
       svgEl("circle", { cx, cy, r: 2.5, fill: ink0 }, labels);
-      svgEl("rect", { x: bx, y: by, width: tw, height: th, rx: 6, fill: surf, stroke: sel ? ink0 : css("--ui-border"), "stroke-width": sel ? 2 : 1, opacity: 0.96 }, labels);
-      svgEl("rect", { x: bx + 5, y: by + 5, width: 4, height: th - 10, rx: 2, fill: has ? colors[bi] : css("--ui-surface-2") }, labels);
-      const t1 = svgEl("text", { x: bx + 14, y: by + fs + 2, "font-size": fs, "font-weight": 700, fill: ink0 }, labels); t1.textContent = d.label;
-      if (fv) { const t2 = svgEl("text", { x: bx + 14, y: by + fs + fv + 5, "font-size": fv, fill: css("--text-secondary"), class: "num" }, labels); t2.textContent = vtxt; }
+      const box = svgEl("rect", { y: by, height: th, rx: 6, fill: surf, stroke: sel ? ink0 : css("--ui-border"), "stroke-width": sel ? 2 : 1, opacity: 0.96 }, labels);
+      const sw = svgEl("rect", { y: by + 5, width: 4, height: th - 10, rx: 2, fill: has ? colors[bi] : css("--ui-surface-2") }, labels);
+      const t1 = svgEl("text", { y: by + fs + 2, "font-size": fs, "font-weight": 700, fill: ink0 }, labels); t1.textContent = d.label;
+      let t2 = null;
+      if (fv) { t2 = svgEl("text", { y: by + fs + fv + 5, "font-size": fv, fill: css("--text-secondary"), class: "num" }, labels); t2.textContent = vtxt; }
+      // 칸 너비 = 실제로 그려진 글자 폭에 맞춤 (못 재면 글자 수로 어림)
+      const tw = Math.max(textW(t1, d.label.length * fs), t2 ? textW(t2, vtxt.length * fv * 0.62) : 0) + padL + padR;
+      const bx = right ? lx : lx - tw;
+      line.setAttribute("x2", right ? bx : bx + tw);
+      box.setAttribute("x", bx); box.setAttribute("width", tw);
+      sw.setAttribute("x", bx + 5);
+      t1.setAttribute("x", bx + padL); if (t2) t2.setAttribute("x", bx + padL);
       // 이름표도 눌러서 고를 수 있게
       const hit = svgEl("rect", { x: bx, y: by, width: tw, height: th, fill: "transparent", style: "cursor:pointer", "pointer-events": "all" }, labels);
-      hit.addEventListener("click", () => opts.onPick && opts.onPick(d.label));
-      hit.addEventListener("mousemove", show); hit.addEventListener("mouseleave", () => tip.hide());
+      hit.addEventListener("click", () => pick(d.label));
+      hit.addEventListener("mousemove", show);
+      hit.addEventListener("mouseenter", () => hover(true));
+      hit.addEventListener("mouseleave", () => { tip.hide(); hover(false); });
     } else {
       const lx = cx + nud[0], ly = cy + nud[1];
       const ink = has && !darkText[bi] ? "#ffffff" : ink0;
@@ -383,7 +397,6 @@ export function geoMap(host, items, opts) {
       if (fv) { const t2 = svgEl("text", { x: lx, y: ly + fv + 1, "text-anchor": "middle", "font-size": fv, fill: has ? ink : muted, class: "num" }, labels); t2.textContent = vtxt; }
     }
   });
-  if (selG) shapes.appendChild(selG); // 선택한 지역의 굵은 테두리가 이웃에 가리지 않게
   // 범례
   const leg = host.querySelector(".map-legend");
   if (leg) {
